@@ -1,0 +1,47 @@
+{
+  "users": [
+    {
+      "fullName": "Student User",
+      "email": "student@edutalks.com",
+      "password": "123456",
+      "role": "student"
+    },
+    {
+      "fullName": "Instructor User",
+      "email": "teacher@edutalks.com",
+      "password": "123456",
+      "role": "instructor"
+    },
+    {
+      "fullName": "Admin User",
+      "email": "admin@edutalks.com",
+      "password": "123456",
+      "role": "admin"
+    }
+  ],
+  "courses": [
+    {
+      "title": "Spoken English Basics",
+      "description": "Learn daily speaking vocabulary and grammar",
+      "category": "career"
+    },
+    {
+      "title": "Environmental Conversations",
+      "description": "Practice topics related to nature & climate",
+      "category": "environment"
+    }
+  ],
+  "quizzes": [
+    {
+      "title": "Daily Vocabulary Test",
+      "difficulty": "easy",
+      "questions": [
+        {
+          "question": "What is the opposite of 'fast'?",
+          "options": ["quick", "slow", "run", "go"],
+          "answer": "slow"
+        }
+      ]
+    }
+  ]
+}
