@@ -21,10 +21,12 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/instructor', instructorRoutes);
 app.use('/student', studentRoutes);
 app.use('/api/quiz-attempts', quizAttemptRoutes);
+
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
-    app.listen(5000, () => console.log('Server running on port 5000'));
+    app.listen(5001, () => console.log('Server running on port 5001'));
   })
   .catch((err) => console.error('MongoDB error:', err));
 

@@ -21,7 +21,7 @@ export const addCourse = async (req, res) => {
       title,
       description,
       category,
-      createdBy: req.user.id,
+      // createdBy: req.user.id,
     });
     await newCourse.save();
     res.status(201).json({ message: 'Course added' });
