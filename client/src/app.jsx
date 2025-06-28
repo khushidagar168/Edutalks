@@ -1,4 +1,3 @@
-// client/src/App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
@@ -20,7 +19,17 @@ const App = () => {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/dashboard"
+          element={
+            (() => {
+              const role = localStorage.getItem('role');
+              if (role === 'admin') return <AdminDashboard />;
+              if (role === 'instructor') return <InstructorDashboard />;
+              return <Dashboard />;
+            })()
+          }
+        />
         <Route path="/courses" element={<Courses />} />
         <Route path="/daily-topics" element={<DailyTopics />} />
         <Route path="/quizzes" element={<Quizzes />} />

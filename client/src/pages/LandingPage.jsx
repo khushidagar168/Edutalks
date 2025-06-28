@@ -89,7 +89,7 @@ const LandingPage = () => {
         <div className="text-slate-600 space-y-1 text-sm">
           <p>Email: support@edutalks.com</p>
           <p>Phone: +91 98765 43210</p>
-          <p>Location: Kurukshetra, India</p>
+          <p>Location: Hyderabad, India</p>
         </div>
       </section>
 
