@@ -2,28 +2,29 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
-// Middleware to authenticate JWT token
+// ✅ Authenticate user using JWT
 export const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
     if (!token) {
-      return res.status(401).json({ message: 'Access token required' });
+      return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Get user from database (optional - for fresh user data)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
     const user = await User.findById(decoded.id).select('-password');
+
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(401).json({ message: 'User not found.' });
     }
 
-    // Check if instructor is approved
+    if (!user.is_active) {
+      return res.status(403).json({ message: 'Account is deactivated.' });
+    }
+
     if (user.role === 'instructor' && !user.isApproved) {
-      return res.status(403).json({ message: 'Instructor account not approved' });
+      return res.status(403).json({ message: 'Instructor account not approved.' });
     }
 
     req.user = {
@@ -31,23 +32,27 @@ export const authenticateToken = async (req, res, next) => {
       email: user.email,
       role: user.role,
       fullName: user.fullName,
-      isApproved: user.isApproved
+      isApproved: user.isApproved,
+      is_active: user.is_active
     };
-    
+
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
+
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ message: 'Token expired' });
     }
+
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: 'Invalid token' });
     }
-    console.error('Auth middleware error:', error);
+
     return res.status(500).json({ message: 'Authentication failed' });
   }
 };
 
-// Middleware to check user roles
+// ✅ Role-based access middleware
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -55,8 +60,8 @@ export const authorizeRoles = (...roles) => {
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `Access denied. Required roles: ${roles.join(', ')}` 
+      return res.status(403).json({
+        message: `Access denied. Required roles: ${roles.join(', ')}`
       });
     }
 
@@ -64,11 +69,34 @@ export const authorizeRoles = (...roles) => {
   };
 };
 
-// Middleware specifically for admin routes
+// ✅ Shortcuts
 export const requireAdmin = authorizeRoles('admin');
-
-// Middleware specifically for instructor routes
 export const requireInstructor = authorizeRoles('instructor', 'admin');
-
-// Middleware for student routes
 export const requireStudent = authorizeRoles('student', 'instructor', 'admin');
+
+// ✅ Optional auth (e.g. for public routes)
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+      const user = await User.findById(decoded.id).select('-password');
+
+      if (user && user.is_active) {
+        req.user = {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          fullName: user.fullName,
+          isApproved: user.isApproved,
+          is_active: user.is_active
+        };
+      }
+    }
+    next();
+  } catch (error) {
+    // Ignore token errors if optional
+    next();
+  }
+};

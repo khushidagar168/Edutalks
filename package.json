@@ -1,7 +1,10 @@
 {
   "dependencies": {
     "aos": "^2.3.4",
+    "axios": "^1.10.0",
+    "dotenv": "^17.0.0",
     "firebase": "^11.9.1",
-    "mongodb": "^6.17.0"
+    "mongodb": "^6.17.0",
+    "react-hot-toast": "^2.5.2"
   }
 }

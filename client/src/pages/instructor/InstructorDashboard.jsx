@@ -1,5 +1,6 @@
 // client/src/pages/InstructorDashboard.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../../services/axios';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -17,46 +18,16 @@ import NavbarInstructor from '../../components/NavbarInstructor';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const InstructorDashboard = () => {
-  const [activeTab, setActiveTab] = useState('course');
-  const [course, setCourse] = useState({ title: '', category: '', description: '' });
-  const [quiz, setQuiz] = useState({ title: '', difficulty: '', question: '' });
-  const [topic, setTopic] = useState({ category: '', text: '' });
-  const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ courses: 0, quizzes: 0, topics: 0 });
 
-  const handleInput = (e, setter) => {
-    const { name, value } = e.target;
-    setter((prev) => ({ ...prev, [name]: value }));
-    setSuccess('');
-  };
-
-  const submitForm = async (type) => {
+  const fetchStats = async () => {
     try {
-      const payload =
-        type === 'course' ? course : type === 'quiz' ? quiz : topic;
-      const endpoint =
-        type === 'course'
-          ? '/instructor/add-course'
-          : type === 'quiz'
-          ? '/instructor/add-quiz'
-          : '/instructor/add-topic';
-
-      await axios.post(endpoint, payload, {
+      const res = await axios.get('/instructor/stats', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       });
-
-      setSuccess(`${type} added successfully`);
-      fetchStats();
-    } catch (err) {
-      alert(`Failed to add ${type}`);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const res = await axios.get('/instructor/stats');
       setStats(res.data);
     } catch (err) {
       console.error('Failed to fetch stats');
@@ -87,6 +58,22 @@ const InstructorDashboard = () => {
     },
   };
 
+  const handleNavigation = (type) => {
+    switch(type) {
+      case 'course':
+        navigate('/instructor/add-course');
+        break;
+      case 'quiz':
+        navigate('/instructor/add-quiz');
+        break;
+      case 'topic':
+        navigate('/instructor/add-topic');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-4">
       <NavbarInstructor />
@@ -94,61 +81,41 @@ const InstructorDashboard = () => {
       <nav className="bg-white p-4 shadow flex justify-between items-center mb-6 rounded-xl">
         <h1 className="text-xl font-bold text-blue-700">👨‍🏫 Instructor Dashboard</h1>
         <div className="space-x-4">
-          {['course', 'quiz', 'topic'].map((tab) => (
+          {[
+            { key: 'course', label: 'Add Course', icon: '📘' },
+            { key: 'quiz', label: 'Add Quiz', icon: '🧠' },
+            { key: 'topic', label: 'Add Topic', icon: '📅' }
+          ].map((item) => (
             <button
-              key={tab}
-              className={`px-4 py-2 rounded-lg transition font-medium ${
-                activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-200 text-black'
-              }`}
-              onClick={() => setActiveTab(tab)}
+              key={item.key}
+              className="px-6 py-3 rounded-lg transition font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transform hover:scale-105"
+              onClick={() => handleNavigation(item.key)}
             >
-              {tab === 'course' ? 'Add Course' : tab === 'quiz' ? 'Add Quiz' : 'Add Topic'}
+              {item.icon} {item.label}
             </button>
           ))}
         </div>
       </nav>
 
-      {success && (
-        <div className="text-center text-green-700 font-medium mb-4 bg-green-100 py-2 rounded">
-          ✅ {success}
-        </div>
-      )}
-
       {/* Chart Section */}
       <div className="bg-white p-6 rounded-xl shadow mb-10">
         <h2 className="text-xl font-semibold text-blue-700 mb-4">📊 Your Contributions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{stats.courses}</div>
+            <div className="text-sm text-gray-600">Courses Created</div>
+          </div>
+          <div className="text-center p-4 bg-yellow-50 rounded-lg">
+            <div className="text-2xl font-bold text-yellow-600">{stats.quizzes}</div>
+            <div className="text-sm text-gray-600">Quizzes Created</div>
+          </div>
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <div className="text-2xl font-bold text-green-600">{stats.topics}</div>
+            <div className="text-sm text-gray-600">Topics Added</div>
+          </div>
+        </div>
         <Bar data={chartData} options={chartOptions} />
       </div>
-
-      {/* Forms */}
-      {activeTab === 'course' && (
-        <div className="bg-white p-6 rounded-xl shadow space-y-4">
-          <h2 className="text-lg font-semibold text-blue-700">📘 Add New Course</h2>
-          <input name="title" value={course.title} onChange={(e) => handleInput(e, setCourse)} placeholder="Course Title" className="w-full border px-4 py-2 rounded" />
-          <input name="category" value={course.category} onChange={(e) => handleInput(e, setCourse)} placeholder="Category" className="w-full border px-4 py-2 rounded" />
-          <textarea name="description" value={course.description} onChange={(e) => handleInput(e, setCourse)} placeholder="Description" className="w-full border px-4 py-2 rounded" />
-          <button onClick={() => submitForm('course')} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Course</button>
-        </div>
-      )}
-
-      {activeTab === 'quiz' && (
-        <div className="bg-white p-6 rounded-xl shadow space-y-4">
-          <h2 className="text-lg font-semibold text-blue-700">🧠 Add New Quiz</h2>
-          <input name="title" value={quiz.title} onChange={(e) => handleInput(e, setQuiz)} placeholder="Quiz Title" className="w-full border px-4 py-2 rounded" />
-          <input name="difficulty" value={quiz.difficulty} onChange={(e) => handleInput(e, setQuiz)} placeholder="Difficulty (easy/medium/hard)" className="w-full border px-4 py-2 rounded" />
-          <textarea name="question" value={quiz.question} onChange={(e) => handleInput(e, setQuiz)} placeholder="Question" className="w-full border px-4 py-2 rounded" />
-          <button onClick={() => submitForm('quiz')} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Quiz</button>
-        </div>
-      )}
-
-      {activeTab === 'topic' && (
-        <div className="bg-white p-6 rounded-xl shadow space-y-4">
-          <h2 className="text-lg font-semibold text-blue-700">📅 Add Daily Topic</h2>
-          <input name="category" value={topic.category} onChange={(e) => handleInput(e, setTopic)} placeholder="Category (e.g. Work, Tech)" className="w-full border px-4 py-2 rounded" />
-          <textarea name="text" value={topic.text} onChange={(e) => handleInput(e, setTopic)} placeholder="Topic Description" className="w-full border px-4 py-2 rounded" />
-          <button onClick={() => submitForm('topic')} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Topic</button>
-        </div>
-      )}
 
       {/* Course List */}
       <div className="mt-10">
