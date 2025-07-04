@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'http://localhost:5001/api', // Update this if backend is hosted
+  baseURL: 'https://edutalks.onrender.com/api', // Update this if backend is hosted
 });
 
 instance.interceptors.request.use((config) => {
