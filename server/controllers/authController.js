@@ -70,13 +70,13 @@ export const register = async (req, res) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // const hashedPassword = await bcrypt.hash(password, 12);
     
     // Create user
     const user = new User({ 
       fullName: fullName.trim(),
       email: email.toLowerCase(), 
-      password: hashedPassword,
+      password: password,
       role: role || 'student',
       isApproved: role === 'instructor' ? false : true // Instructors need approval
     });

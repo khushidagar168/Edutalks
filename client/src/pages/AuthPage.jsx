@@ -20,6 +20,7 @@ import {
   X
 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
+import NavbarLanding from '../components/NavbarLanding';
 
 // Toast Notification Component
 const Toast = ({ message, type, onClose, visible }) => {
@@ -219,7 +220,7 @@ const handleGoogleAuth = async () => {
   hideToast();
 
   // Prevent Google auth for admin role in registration mode
-  if (!isLogin && formData.role === 'admin') {
+  if (!isLogin && form.role === 'admin') {
     showToast('Admin accounts cannot be created via Google authentication.', 'error');
     setIsLoading(false);
     return;
@@ -228,16 +229,14 @@ const handleGoogleAuth = async () => {
   try {
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
-    console.log(result)
     // Try to login first
     try {
       const loginResponse = await axios.post('/auth/google-login', {
         email: user.email,
         name: user.displayName,
         googleId: user.uid,
-        requestedRole: formData.role, // Pass as requestedRole for validation
+        requestedRole: form.role, // Pass as requestedRole for validation
       });
-
       const { token, user: userData } = loginResponse.data;
       
       // Store auth data (in your real app, not in Claude artifacts)
@@ -252,13 +251,13 @@ const handleGoogleAuth = async () => {
       
     } catch (loginError) {
       // If login fails, try to register (only for non-admin roles)
-      if (loginError.response?.status === 404 && formData.role !== 'admin') {
+      if (loginError.response?.status === 404 && form.role !== 'admin') {
         try {
           const registerResponse = await axios.post('/auth/google-register', {
             fullName: user.displayName,
             email: user.email,
             googleId: user.uid,
-            role: formData.role,
+            role: form.role,
           });
 
           const { token, user: userData, message } = registerResponse.data;
@@ -274,7 +273,7 @@ const handleGoogleAuth = async () => {
             showToast('Your instructor account is pending admin approval. You will be notified once approved.', 'info');
             // Maybe redirect to a pending approval page
           } else {
-            // setTimeout(() => navigate(getDashboardPath(userData.role)), 1000);
+            setTimeout(() => navigate(getDashboardPath(userData.role)), 1000);
           }
         } catch (registerError) {
           const errorMessage = registerError.response?.data?.message || 'Google registration failed. Please try again.';
@@ -347,15 +346,15 @@ const handleGoogleAuth = async () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-8">
-      {/* Toast Notification */}
+      <NavbarLanding/>
       <Toast 
         message={toast.message} 
         type={toast.type} 
         visible={toast.visible} 
         onClose={hideToast} 
       />
-
-      <div className="w-full max-w-md">
+  
+      <div className="w-full max-w-md mt-[50px]">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
