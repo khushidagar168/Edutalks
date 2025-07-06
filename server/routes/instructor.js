@@ -3,6 +3,7 @@ import * as quizController from '../controllers/quizController.js';
 
 import authenticate from '../middleware/authenticate.js';
 import { addCourse } from '../controllers/courseController.js';
+import { deleteCourse, getStats } from '../controllers/instructorController.js';
 
 const {
   createQuiz,
@@ -41,6 +42,9 @@ router.get('/attempt/:attemptId/results', authenticate, getAttemptResults);
 
 // Quiz analytics (for instructors)
 router.get('/:id/statistics', authenticate, getQuizStatistics);
+
+router.get('/stats/:id', authenticate,getStats)
+router.delete('/delete-course/:id', deleteCourse)
 
 // Violation tracking
 router.post('/attempt/:attemptId/violation', authenticate, addViolation);

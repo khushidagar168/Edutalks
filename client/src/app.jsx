@@ -1,5 +1,8 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Spin } from 'antd';
+import 'antd/dist/reset.css'; // Make sure you import the CSS
+
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import StudentDashboard from './pages/StudentDashboard';
@@ -20,31 +23,55 @@ import AddQuiz from './pages/AddQuiz';
 import AddTopic from './pages/AddTopic';
 
 const App = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const isAdminPage = user?.role === "admin"
-  const isInstructorPage = user?.role === "instructor"
-  const isStudentPage = user?.role === "student"
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    setUser(storedUser);
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          height: '100vh',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Spin size="large" tip="Loading..." />
+      </div>
+    );
+  }
 
   return (
     <Router>
       {user?.role === 'student' && <NavbarStudent />}
       {user?.role === 'instructor' && <NavbarInstructor />}
       {user?.role === 'admin' && <NavbarAdmin />}
+
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
+
         <Route
           path="/dashboard"
           element={
-            (() => {
-              const user = JSON.parse(localStorage.getItem('user'));
-              if (user?.role === 'admin') return <AdminDashboard />;
-              if (user?.role === 'instructor') return <InstructorDashboard />;
-              return <StudentDashboard />;
-            })()
+            user?.role === 'admin' ? (
+              <AdminDashboard />
+            ) : user?.role === 'instructor' ? (
+              <InstructorDashboard />
+            ) : user?.role === 'student' ? (
+              <StudentDashboard />
+            ) : (
+              <Navigate to="/auth" />
+            )
           }
         />
+
         <Route path="/courses" element={<Courses />} />
         <Route path="/daily-topics" element={<DailyTopics />} />
         <Route path="/quizzes" element={<Quizzes />} />

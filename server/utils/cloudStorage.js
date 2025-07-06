@@ -33,7 +33,7 @@ export const uploadFile = async (file, folder = 'uploads') => {
       Key,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: 'public-read', // Make file publicly readable
+      // ACL: 'public-read', // Make file publicly readable
     };
 
     await s3.send(new PutObjectCommand(params));

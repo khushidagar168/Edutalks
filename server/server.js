@@ -10,6 +10,7 @@ import studentRoutes from './routes/student.js';
 import quizAttemptRoutes from './routes/quizAttempt.js';
 import courseRoutes from "./routes/courses.js"
 import quizRoutes from './routes/quizzes.js';
+import topicRoutes from "./routes/topic.js"
 
 
 dotenv.config();
@@ -24,6 +25,7 @@ app.use('/student', studentRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/quiz-attempts', quizAttemptRoutes);
 app.use('/api/quizzes', quizRoutes);
+app.use('/api/topics', topicRoutes);
 
 
 mongoose.connect(process.env.MONGO_URI)

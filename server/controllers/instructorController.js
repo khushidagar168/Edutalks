@@ -50,3 +50,37 @@ export const deleteCourse = async (req, res) => {
     res.status(500).json({ message: 'Delete failed' });
   }
 };
+
+
+export const getStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: 'Instructor ID is required.' });
+    }
+
+    // Find courses owned by this instructor
+    const courses = await Course.find({ owner_id: id });
+
+    // Find quizzes created by this instructor
+    const quizzes = await Quiz.find({ instructor_id: id });
+    // Find quizzes created by this instructor
+    const topics = await Topic.find({ instructor_id: id });
+
+
+    res.status(200).json({
+      success: true,
+      coursesCount: courses.length,
+      quizzesCount: quizzes.length,
+      topicsCount: topics.length,
+      courses,
+      quizzes,
+      topics
+    });
+  } catch (error) {
+    console.error('Error in getStats:', error);
+    res.status(500).json({ message: 'Failed to get instructor stats.', error: error.message });
+  }
+};
+

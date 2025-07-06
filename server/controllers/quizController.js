@@ -264,7 +264,7 @@ const updateQuiz = async (req, res) => {
 // Delete quiz
 const deleteQuiz = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const instructorId = req.user.id;
 
     const quiz = await Quiz.findById(id);
@@ -283,14 +283,6 @@ const deleteQuiz = async (req, res) => {
       });
     }
 
-    // Check if quiz has attempts
-    const hasAttempts = await QuizAttempt.countDocuments({ quiz_id: id });
-    if (hasAttempts > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete quiz with existing attempts. Archive it instead.'
-      });
-    }
 
     await Quiz.findByIdAndDelete(id);
 
@@ -447,7 +439,7 @@ const startQuizAttempt = async (req, res) => {
       _id: q._id,
       question_text: q.question_text,
       question_type: q.question_type,
-      options: quiz.settings.shuffle_options 
+      options: quiz.settings.shuffle_options
         ? q.options.map(opt => ({ text: opt.text, _id: opt._id })).sort(() => Math.random() - 0.5)
         : q.options.map(opt => ({ text: opt.text, _id: opt._id })),
       points: q.points || 1,
@@ -783,6 +775,75 @@ const addViolation = async (req, res) => {
   }
 };
 
+const getQuizzes = async (req, res) => {
+  try {
+    const quizzes = await Quiz.find({ status: 'published' })
+      .sort({ created_at: -1 })
+      .select('title difficulty_level questions instructor_id');
+
+    const formatted = quizzes.map((quiz) => {
+      const q = quiz.questions[0] || {};
+      return {
+        _id: quiz._id,
+        title: quiz.title,
+        difficulty: quiz.difficulty_level,
+        question: q.question_text,
+        options: q.options?.map((opt) => opt.text) || [],
+        correctOption: q.options?.[q.correct_answer_index]?.text || '',
+      };
+    });
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error fetching quizzes:', error);
+    res.status(500).json({ error: 'Failed to fetch quizzes' });
+  }
+};
+
+// ✅ Add new quiz
+const addQuiz = async (req, res) => {
+  try {
+    let {
+      title,
+      description,
+      timeLimit,
+      course_id,
+      instructor_id,
+      questions
+    } = req.body;
+
+    questions = questions.map(q => {
+      const { _id, id, ...rest } = q;
+      return rest;
+    });
+
+
+    const quizData = {
+      title,
+      description,
+      timeLimit,
+      instructor_id,
+      questions
+    };
+
+    if (course_id && course_id.trim() !== '') {
+      quizData.course_id = course_id;
+    }
+
+    const newQuiz = new Quiz(quizData);
+    await newQuiz.save();
+
+    res.status(201).json({
+      message: 'Quiz created!',
+      quiz: newQuiz
+    });
+  } catch (error) {
+    console.error('Error adding quiz:', error);
+    res.status(500).json({ error: 'Could not add quiz' });
+  }
+};
+
+
 export {
   createQuiz,
   getInstructorQuizzes,
@@ -795,5 +856,7 @@ export {
   submitQuizAttempt,
   getAttemptResults,
   getQuizStatistics,
-  addViolation
+  addViolation,
+  addQuiz,
+  getQuizzes
 };
