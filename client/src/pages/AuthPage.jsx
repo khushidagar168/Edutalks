@@ -3,14 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from '../services/axios';
 import { auth, provider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
-import { 
-  Mail, 
-  Lock, 
-  User, 
-  Eye, 
-  EyeOff, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Mail,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle,
   Loader2,
   GraduationCap,
   Users,
@@ -58,12 +58,12 @@ const Toast = ({ message, type, onClose, visible }) => {
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [form, setForm] = useState({ 
-    fullName: '', 
-    email: '', 
-    password: '', 
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
     confirmPassword: '',
-    role: 'student' 
+    role: 'student'
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +72,7 @@ const AuthPage = () => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'error' });
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -84,6 +84,14 @@ const AuthPage = () => {
   const hideToast = () => {
     setToast({ ...toast, visible: false });
   };
+
+
+  useEffect(() => {
+    // Clear stale auth data on mount
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }, []);
+
 
   useEffect(() => {
     // Clear form when switching between login/register
@@ -103,14 +111,14 @@ const AuthPage = () => {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    
+
     let strength = 0;
     if (minLength) strength += 1;
     if (hasUpperCase) strength += 1;
     if (hasLowerCase) strength += 1;
     if (hasNumbers) strength += 1;
     if (hasSpecialChar) strength += 1;
-    
+
     setPasswordStrength(strength);
     return minLength && hasUpperCase && hasLowerCase && hasNumbers;
   };
@@ -151,7 +159,7 @@ const AuthPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear specific error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -165,7 +173,7 @@ const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       const firstError = Object.values(errors)[0];
       showToast(firstError, 'error');
@@ -185,17 +193,17 @@ const AuthPage = () => {
         });
 
         const { token, user } = response.data;
-        
+
         // Store auth data
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-        
+
         showToast('Login successful!', 'success');
-        
+
         // Navigate based on role
         const redirectPath = location.state?.from?.pathname || getDashboardPath(user.role);
         setTimeout(() => navigate(redirectPath), 1000);
-        
+
       } else {
         await axios.post('/auth/register', {
           fullName: form.fullName,
@@ -203,7 +211,7 @@ const AuthPage = () => {
           password: form.password,
           role: form.role,
         });
-        
+
         showToast('Registration successful! Please login to continue.', 'success');
         setTimeout(() => setIsLogin(true), 2000);
       }
@@ -215,85 +223,85 @@ const AuthPage = () => {
     }
   };
 
-const handleGoogleAuth = async () => {
-  setIsLoading(true);
-  hideToast();
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+    hideToast();
 
-  // Prevent Google auth for admin role in registration mode
-  if (!isLogin && form.role === 'admin') {
-    showToast('Admin accounts cannot be created via Google authentication.', 'error');
-    setIsLoading(false);
-    return;
-  }
+    // Prevent Google auth for admin role in registration mode
+    if (!isLogin && form.role === 'admin') {
+      showToast('Admin accounts cannot be created via Google authentication.', 'error');
+      setIsLoading(false);
+      return;
+    }
 
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-    // Try to login first
     try {
-      const loginResponse = await axios.post('/auth/google-login', {
-        email: user.email,
-        name: user.displayName,
-        googleId: user.uid,
-        requestedRole: form.role, // Pass as requestedRole for validation
-      });
-      const { token, user: userData } = loginResponse.data;
-      
-      // Store auth data (in your real app, not in Claude artifacts)
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      showToast('Google login successful!', 'success');
-      
-      // Navigate based on role
-      const redirectPath = location.state?.from?.pathname || getDashboardPath(userData.role);
-      setTimeout(() => navigate(redirectPath), 1000);
-      
-    } catch (loginError) {
-      // If login fails, try to register (only for non-admin roles)
-      if (loginError.response?.status === 404 && form.role !== 'admin') {
-        try {
-          const registerResponse = await axios.post('/auth/google-register', {
-            fullName: user.displayName,
-            email: user.email,
-            googleId: user.uid,
-            role: form.role,
-          });
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      // Try to login first
+      try {
+        const loginResponse = await axios.post('/auth/google-login', {
+          email: user.email,
+          name: user.displayName,
+          googleId: user.uid,
+          requestedRole: form.role, // Pass as requestedRole for validation
+        });
+        const { token, user: userData } = loginResponse.data;
 
-          const { token, user: userData, message } = registerResponse.data;
-          
-          // Store auth data
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(userData));
-          
-          showToast(message, 'success');
-          
-          // Handle instructor approval case
-          if (userData.role === 'instructor' && !userData.isApproved) {
-            showToast('Your instructor account is pending admin approval. You will be notified once approved.', 'info');
-            // Maybe redirect to a pending approval page
-          } else {
-            setTimeout(() => navigate(getDashboardPath(userData.role)), 1000);
+        // Store auth data (in your real app, not in Claude artifacts)
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+
+        showToast('Google login successful!', 'success');
+
+        // Navigate based on role
+        const redirectPath = location.state?.from?.pathname || getDashboardPath(userData.role);
+        setTimeout(() => navigate(redirectPath), 1000);
+
+      } catch (loginError) {
+        // If login fails, try to register (only for non-admin roles)
+        if (loginError.response?.status === 404 && form.role !== 'admin') {
+          try {
+            const registerResponse = await axios.post('/auth/google-register', {
+              fullName: user.displayName,
+              email: user.email,
+              googleId: user.uid,
+              role: form.role,
+            });
+
+            const { token, user: userData, message } = registerResponse.data;
+
+            // Store auth data
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(userData));
+
+            showToast(message, 'success');
+
+            // Handle instructor approval case
+            if (userData.role === 'instructor' && !userData.isApproved) {
+              showToast('Your instructor account is pending admin approval. You will be notified once approved.', 'info');
+              // Maybe redirect to a pending approval page
+            } else {
+              setTimeout(() => navigate(getDashboardPath(userData.role)), 1000);
+            }
+          } catch (registerError) {
+            const errorMessage = registerError.response?.data?.message || 'Google registration failed. Please try again.';
+            showToast(errorMessage, 'error');
           }
-        } catch (registerError) {
-          const errorMessage = registerError.response?.data?.message || 'Google registration failed. Please try again.';
+        } else if (loginError.response?.status === 403) {
+          // Handle instructor not approved case
+          showToast(loginError.response.data.message, 'error');
+        } else {
+          const errorMessage = loginError.response?.data?.message || 'Google authentication failed. Please try again.';
           showToast(errorMessage, 'error');
         }
-      } else if (loginError.response?.status === 403) {
-        // Handle instructor not approved case
-        showToast(loginError.response.data.message, 'error');
-      } else {
-        const errorMessage = loginError.response?.data?.message || 'Google authentication failed. Please try again.';
-        showToast(errorMessage, 'error');
       }
+    } catch (error) {
+      console.error('Google authentication error:', error);
+      showToast('Google authentication failed. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Google authentication error:', error);
-    showToast('Google authentication failed. Please try again.', 'error');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const getDashboardPath = (role) => {
     switch (role) {
@@ -316,24 +324,24 @@ const handleGoogleAuth = async () => {
   };
 
   const roleOptions = [
-    { 
-      value: 'student', 
-      label: 'Student', 
-      icon: GraduationCap, 
+    {
+      value: 'student',
+      label: 'Student',
+      icon: GraduationCap,
       description: 'Learn from expert instructors',
       color: 'text-blue-600'
     },
-    { 
-      value: 'instructor', 
-      label: 'Instructor', 
-      icon: BookOpen, 
+    {
+      value: 'instructor',
+      label: 'Instructor',
+      icon: BookOpen,
       description: 'Teach and share knowledge',
       color: 'text-purple-600'
     },
-    ...(isLogin ? [{ 
-      value: 'admin', 
-      label: 'Admin', 
-      icon: Shield, 
+    ...(isLogin ? [{
+      value: 'admin',
+      label: 'Admin',
+      icon: Shield,
       description: 'Manage platform operations',
       color: 'text-emerald-600'
     }] : []),
@@ -346,14 +354,14 @@ const handleGoogleAuth = async () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-8">
-      <NavbarLanding/>
-      <Toast 
-        message={toast.message} 
-        type={toast.type} 
-        visible={toast.visible} 
-        onClose={hideToast} 
+      <NavbarLanding />
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onClose={hideToast}
       />
-  
+
       <div className="w-full max-w-md mt-[50px]">
         {/* Header */}
         <div className="text-center mb-8">
@@ -373,7 +381,7 @@ const handleGoogleAuth = async () => {
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-6">
-           
+
 
             {/* Admin Login Only Notice */}
             {form.role === 'admin' && !isLogin && (
@@ -405,9 +413,8 @@ const handleGoogleAuth = async () => {
                     name="fullName"
                     value={form.fullName}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.fullName ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.fullName ? 'border-red-500' : 'border-gray-300'
+                      }`}
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -427,9 +434,8 @@ const handleGoogleAuth = async () => {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.email ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.email ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   placeholder="Enter your email"
                 />
               </div>
@@ -448,9 +454,8 @@ const handleGoogleAuth = async () => {
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.password ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.password ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   placeholder="Enter your password"
                 />
                 <button
@@ -464,13 +469,13 @@ const handleGoogleAuth = async () => {
               {errors.password && (
                 <p className="text-red-600 text-sm">{errors.password}</p>
               )}
-              
+
               {/* Password Strength Indicator (Register only and not admin) */}
               {!isLogin && canRegister && form.password && (
                 <div className="mt-2">
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 h-2 bg-gray-200 rounded-full">
-                      <div 
+                      <div
                         className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
                         style={{ width: `${(passwordStrength / 5) * 100}%` }}
                       />
@@ -480,7 +485,7 @@ const handleGoogleAuth = async () => {
                 </div>
               )}
             </div>
-           
+
             {/* Confirm Password (Register only and not admin) */}
             {!isLogin && canRegister && (
               <div className="space-y-1">
@@ -492,9 +497,8 @@ const handleGoogleAuth = async () => {
                     name="confirmPassword"
                     value={form.confirmPassword}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                      }`}
                     placeholder="Confirm your password"
                   />
                   <button
@@ -510,7 +514,7 @@ const handleGoogleAuth = async () => {
                 )}
               </div>
             )}
-                {/* Role Selection Dropdown */}
+            {/* Role Selection Dropdown */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">I am a:</label>
               <div className="relative">
@@ -528,7 +532,7 @@ const handleGoogleAuth = async () => {
                   </div>
                   <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isRoleDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {isRoleDropdownOpen && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
                     {roleOptions.map((option) => (
@@ -539,9 +543,8 @@ const handleGoogleAuth = async () => {
                           setForm(prev => ({ ...prev, role: option.value }));
                           setIsRoleDropdownOpen(false);
                         }}
-                        className={`w-full flex items-center p-3 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
-                          form.role === option.value ? 'bg-blue-50' : ''
-                        }`}
+                        className={`w-full flex items-center p-3 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${form.role === option.value ? 'bg-blue-50' : ''
+                          }`}
                       >
                         <option.icon className={`h-5 w-5 mr-3 ${option.color}`} />
                         <div className="text-left">
