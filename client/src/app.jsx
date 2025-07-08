@@ -21,6 +21,9 @@ import NavbarStudent from './components/NavbarStudent';
 import AdminUsers from './pages/AdminUsers';
 import AddQuiz from './pages/AddQuiz';
 import AddTopic from './pages/AddTopic';
+import CoursesAdmin from './pages/CoursesAdmin';
+import QuizzesAdmin from './pages/QuizzesAdmin';
+import TopicsAdmin from './pages/TopicsAdmin';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -73,6 +76,9 @@ const App = () => {
         />
 
         <Route path="/courses" element={<Courses />} />
+        <Route path="/admin/courses" element={<CoursesAdmin />} />
+        <Route path="/admin/quizzes" element={<QuizzesAdmin />} />
+        <Route path="/admin/topics" element={<TopicsAdmin />} />
         <Route path="/daily-topics" element={<DailyTopics />} />
         <Route path="/quizzes" element={<Quizzes />} />
         <Route path="/pronunciation" element={<Pronunciation />} />

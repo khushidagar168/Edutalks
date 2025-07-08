@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Save, Eye, EyeOff } from 'lucide-react';
-import axios from '../services/axios'
+import { Plus, X, Save, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import axios from '../services/axios';
 
-const AddQuiz = () => {
+const AddQuiz = ({ quizToEdit, onSaveSuccess, onCancel }) => {
   const user = JSON.parse(localStorage.getItem('user'));
 
   const [quiz, setQuiz] = useState({
@@ -18,8 +18,8 @@ const AddQuiz = () => {
     type: 'multiple-choice',
     question: '',
     options: ['', '', '', ''],
-    correctAnswerIndex: -1, // Use index instead of value
-    correctAnswer: '', // Keep for true-false compatibility
+    correctAnswerIndex: -1,
+    correctAnswer: '',
     explanation: '',
     points: 1,
     blanks: []
@@ -27,11 +27,22 @@ const AddQuiz = () => {
 
   const [showPreview, setShowPreview] = useState(false);
   const [editingIndex, setEditingIndex] = useState(-1);
-  const [userCourses, setUserCourses] = useState([
-    { id: 1, title: 'React Fundamentals' },
-    { id: 2, title: 'Advanced JavaScript' },
-    { id: 3, title: 'Node.js Backend' }
-  ]);
+  const [userCourses, setUserCourses] = useState([]);
+
+  useEffect(() => {
+    if (quizToEdit) {
+      const editedQuiz = {
+        ...quizToEdit,
+        questions: quizToEdit.questions.map(q => ({
+          ...q,
+          correctAnswerIndex: q.type === 'multiple-choice' 
+            ? q.options.indexOf(q.correctAnswer)
+            : -1
+        }))
+      };
+      setQuiz(editedQuiz);
+    }
+  }, [quizToEdit]);
 
   const questionTypes = [
     { value: 'multiple-choice', label: 'Multiple Choice', icon: '📝' },
@@ -161,11 +172,9 @@ const AddQuiz = () => {
   const addQuestion = () => {
     if (!validateQuestion()) return;
 
-    // Create the question object with the correct answer format
     const newQuestion = {
       ...currentQuestion,
       id: Date.now(),
-      // Set correctAnswer based on question type
       correctAnswer: currentQuestion.type === 'multiple-choice' 
         ? currentQuestion.options[currentQuestion.correctAnswerIndex] 
         : currentQuestion.correctAnswer
@@ -202,15 +211,12 @@ const AddQuiz = () => {
 
   const editQuestion = (index) => {
     const question = quiz.questions[index];
-    
-    // Convert back to the editing format
     const editingQuestion = {
       ...question,
       correctAnswerIndex: question.type === 'multiple-choice' 
         ? question.options.indexOf(question.correctAnswer)
         : -1
     };
-    
     setCurrentQuestion(editingQuestion);
     setEditingIndex(index);
   };
@@ -240,28 +246,31 @@ const AddQuiz = () => {
     if (!validateQuiz()) return;
 
     try {
-      console.log('Saving quiz:', quiz);
-      await axios.post('/quizzes/add', quiz, {
+      const method = quizToEdit ? 'put' : 'post';
+      const url = quizToEdit ? `/quizzes/${quizToEdit._id}` : '/quizzes/add';
+      
+      const quizData = {
+        ...quiz,
+        questions: quiz.questions.map(q => ({
+          ...q,
+          correctAnswer: q.type === 'multiple-choice' 
+            ? q.options[q.correctAnswerIndex]
+            : q.correctAnswer
+        }))
+      };
+
+      await axios[method](url, quizData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         }
       });
-      alert('Quiz created successfully!');
-      // Reset the form
-      setQuiz({
-        title: '',
-        description: '',
-        timeLimit: 30,
-        course_id: '',
-        instructor_id: user?.id || '',
-        questions: []
-      });
-      resetCurrentQuestion();
+      
+      alert(`Quiz ${quizToEdit ? 'updated' : 'created'} successfully!`);
+      onSaveSuccess();
     } catch (err) {
       console.error('Error saving quiz:', err);
-      console.error('Error response:', err.response?.data);
-      alert('Failed to create quiz. Please try again.');
+      alert(`Failed to ${quizToEdit ? 'update' : 'create'} quiz. Please try again.`);
     }
   };
 
@@ -331,13 +340,20 @@ const AddQuiz = () => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Quiz</h1>
-            <p className="text-gray-600">Design interactive quizzes with multiple question types</p>
+          <div className="mb-8 flex items-center justify-between">
+            <button
+              onClick={onCancel}
+              className="flex items-center text-indigo-600 hover:text-indigo-800"
+            >
+              <ArrowLeft size={20} className="mr-2" />
+              Back to quizzes
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {quizToEdit ? 'Edit Quiz' : 'Create New Quiz'}
+            </h1>
+            <div className="w-8"></div>
           </div>
 
-          {/* Quiz Basic Info */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-gray-50 rounded-xl p-6">
@@ -382,13 +398,11 @@ const AddQuiz = () => {
                 </div>
               </div>
 
-              {/* Question Creator */}
               <div className="bg-gray-50 rounded-xl p-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">
                   {editingIndex >= 0 ? 'Edit Question' : 'Add New Question'}
                 </h2>
 
-                {/* Question Type Selector */}
                 <div className="mb-6">
                   <label className="block text-gray-700 mb-3 font-medium">Question Type</label>
                   <div className="flex flex-wrap gap-3">
@@ -408,7 +422,6 @@ const AddQuiz = () => {
                   </div>
                 </div>
 
-                {/* Question Input */}
                 <div className="mb-6">
                   <label className="block text-gray-700 mb-2 font-medium">Question*</label>
                   {currentQuestion.type === 'fill-blanks' ? (
@@ -434,7 +447,6 @@ const AddQuiz = () => {
                   )}
                 </div>
 
-                {/* Question Type Specific Fields */}
                 {currentQuestion.type === 'multiple-choice' && (
                   <div className="mb-6">
                     <label className="block text-gray-700 mb-3 font-medium">Options*</label>
@@ -526,7 +538,6 @@ const AddQuiz = () => {
                   </div>
                 )}
 
-                {/* Common Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-gray-700 mb-2 font-medium">Points</label>
@@ -574,7 +585,6 @@ const AddQuiz = () => {
               </div>
             </div>
 
-            {/* Questions List */}
             <div className="space-y-6">
               <div className="bg-gray-50 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -643,7 +653,6 @@ const AddQuiz = () => {
                 </div>
               </div>
 
-              {/* Save Quiz */}
               <button
                 onClick={saveQuiz}
                 disabled={quiz.questions.length === 0}

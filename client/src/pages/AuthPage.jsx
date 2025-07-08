@@ -202,7 +202,7 @@ const AuthPage = () => {
 
         // Navigate based on role
         const redirectPath = location.state?.from?.pathname || getDashboardPath(user.role);
-        setTimeout(() => navigate(redirectPath), 1000);
+        setTimeout(() => navigate('/dashboard'), 1000);
 
       } else {
         await axios.post('/auth/register', {

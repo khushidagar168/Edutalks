@@ -777,19 +777,25 @@ const addViolation = async (req, res) => {
 
 const getQuizzes = async (req, res) => {
   try {
-    const quizzes = await Quiz.find({ status: 'published' })
-      .sort({ created_at: -1 })
-      .select('title difficulty_level questions instructor_id');
+    // ✅ Remove filter for `status` since your document doesn’t have it
+    const quizzes = await Quiz.find()
+      .sort({ created_at: -1 });
 
     const formatted = quizzes.map((quiz) => {
-      const q = quiz.questions[0] || {};
       return {
         _id: quiz._id,
         title: quiz.title,
-        difficulty: quiz.difficulty_level,
-        question: q.question_text,
-        options: q.options?.map((opt) => opt.text) || [],
-        correctOption: q.options?.[q.correct_answer_index]?.text || '',
+        description: quiz.description,
+        instructor_id: quiz.instructor_id,
+        timeLimit: quiz.timeLimit,
+        questions: quiz.questions.map((q) => ({
+          type: q.type,
+          question: q.question,
+          options: q.options, // This is already an array of strings
+          correctAnswer: q.correctAnswer,
+          points: q.points
+        })),
+        created_at: quiz.created_at
       };
     });
 
@@ -799,6 +805,7 @@ const getQuizzes = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch quizzes' });
   }
 };
+
 
 // ✅ Add new quiz
 const addQuiz = async (req, res) => {

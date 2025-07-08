@@ -15,6 +15,9 @@ const NavbarAdmin = () => {
       <h1 className="text-xl font-bold text-red-600">EduTalks - Admin</h1>
       <div className="space-x-4 text-sm">
         <Link to="/dashboard">Dashboard</Link>
+        <Link to="/admin/courses">Courses</Link>
+        <Link to="/admin/quizzes">Quizzes</Link>
+        <Link to="/admin/topics">Topics</Link>
         <Link to="/profile">Profile</Link>
         <button onClick={handleLogout} className="text-red-500 ml-4 hover:underline">
           Logout

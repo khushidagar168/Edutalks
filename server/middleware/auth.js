@@ -52,6 +52,56 @@ export const authenticateToken = async (req, res, next) => {
   }
 };
 
+// ✅ Authenticate ONLY admin users
+export const authenticateAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+    if (!token) {
+      return res.status(401).json({ message: 'Access denied. Admin authentication required.' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return res.status(401).json({ message: 'User not found.' });
+    }
+
+
+    // ✅ Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ 
+        message: 'Access denied. Admin privileges required.' 
+      });
+    }
+
+    req.user = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName,
+      isApproved: user.isApproved,
+      is_active: user.is_active
+    };
+
+    next();
+  } catch (error) {
+    console.error('Admin auth middleware error:', error);
+
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired' });
+    }
+
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    return res.status(500).json({ message: 'Admin authentication failed' });
+  }
+};
+
 // ✅ Role-based access middleware
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {

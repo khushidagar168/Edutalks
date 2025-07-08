@@ -212,6 +212,86 @@ export const updateCourse = async (req, res) => {
     });
   }
 };
+export const updateCourseAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, price, category, tags, level, duration } = req.body;
+    // Check if course exists
+    const existingCourse = await Course.findById(id);
+    if (!existingCourse) {
+      return res.status(404).json({
+        message: 'Course not found'
+      });
+    }
+    // Validate price if provided
+    let parsedPrice;
+    if (price !== undefined) {
+      parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({
+          message: 'Invalid price. Price must be a positive number.'
+        });
+      }
+    }
+
+    // Handle file uploads
+    let imageUrl = existingCourse.image;
+    let pdfUrl = existingCourse.pdf;
+
+    try {
+      if (req.files?.image) {
+        imageUrl = await uploadFile(req.files.image[0], 'images');
+      }
+      if (req.files?.pdf) {
+        pdfUrl = await uploadFile(req.files.pdf[0], 'documents');
+      }
+    } catch (err) {
+      console.error('File upload error:', err);
+      return res.status(500).json({
+        message: 'File upload failed',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+
+    // Build update object
+    const updateData = {
+      updatedAt: new Date()
+    };
+    if (title) updateData.title = title.trim();
+    if (description) updateData.description = description.trim();
+    if (price !== undefined) updateData.price = parsedPrice;
+    if (category) updateData.category = category;
+    if (tags) updateData.tags = tags.split(',').map(tag => tag.trim());
+    if (level) updateData.level = level;
+    if (duration) updateData.duration = parseInt(duration);
+    if (imageUrl) updateData.image = imageUrl;
+    if (pdfUrl) updateData.pdf = pdfUrl;
+
+    // Update course
+    const updatedCourse = await Course.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('owner_id', 'name email');
+    if (!updatedCourse) {
+      return res.status(404).json({
+        message: 'Course not found'
+      });
+    }
+
+    res.json({
+      message: 'Course updated successfully',
+      course: updatedCourse
+    });
+
+  } catch (err) {
+    console.error('Error updating course:', err);
+    res.status(500).json({
+      message: 'Failed to update course',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
 
 // Get a single course by ID
 export const getCourseById = async (req, res) => {

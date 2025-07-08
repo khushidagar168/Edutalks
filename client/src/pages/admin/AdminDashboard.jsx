@@ -155,13 +155,6 @@ const AdminDashboard = () => {
       bgGradient: 'from-purple-500 to-purple-600',
     },
     {
-      title: 'Total Revenue',
-      value: `₹${(stats.totalRevenue || 0).toLocaleString()}`,
-      icon: DollarSign,
-      change: '+23.1%',
-      bgGradient: 'from-emerald-500 to-emerald-600',
-    },
-    {
       title: 'Pending Approvals',
       value: stats.pendingApprovals.toString(),
       icon: Clock,
@@ -170,19 +163,7 @@ const AdminDashboard = () => {
     },
   ];
 
-  const revenueData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'Revenue',
-        data: [12000, 19000, 15000, 25000, 22000, 30000],
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        tension: 0.4,
-        fill: true,
-      },
-    ],
-  };
+
 
   const userGrowthData = {
     labels: ['Students', 'Instructors', 'Admin'],
@@ -268,21 +249,16 @@ const AdminDashboard = () => {
                   <card.icon className="h-8 w-8 text-white" />
                 </div>
               </div>
+              {card.title==="Total Users" && <button
+                onClick={() => navigate('/admin/users')}
+                className="my-4 px-4 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors duration-200"
+              >
+                Manage All Users
+              </button>}
             </div>
           ))}
         </div>
 
-        {/* Revenue and user growth charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-80">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue Trends</h3>
-            <Line data={revenueData} options={chartOptions} />
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-80">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">User Growth</h3>
-            <Doughnut data={userGrowthData} options={doughnutOptions} />
-          </div>
-        </div>
 
         {/* Instructor table with filter/search/approve/reject */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">

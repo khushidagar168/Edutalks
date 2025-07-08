@@ -14,7 +14,7 @@ const Courses = () => {
       const res = await axios.get('/courses', {
         params: { search, category },
       });
-      setCourses(res.data);
+      setCourses(res.data.courses);
     } catch (err) {
       console.error('Failed to fetch courses');
     } finally {
