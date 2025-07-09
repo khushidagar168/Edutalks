@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 import axios from '../services/axios';
 import { auth, provider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
@@ -75,6 +77,7 @@ const AuthPage = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { setUser } = useContext(AuthContext);
 
   // Show toast notification
   const showToast = (message, type = 'error') => {
@@ -90,6 +93,7 @@ const AuthPage = () => {
     // Clear stale auth data on mount
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setUser(null)
   }, []);
 
 
@@ -191,18 +195,17 @@ const AuthPage = () => {
           password: form.password,
           role: form.role,
         });
-
         const { token, user } = response.data;
-
+        
         // Store auth data
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-
+        setUser(user);
         showToast('Login successful!', 'success');
 
         // Navigate based on role
         const redirectPath = location.state?.from?.pathname || getDashboardPath(user.role);
-        setTimeout(() => navigate('/dashboard'), 1000);
+       setTimeout(() => navigate('/dashboard'), 2000);
 
       } else {
         await axios.post('/auth/register', {
@@ -250,7 +253,7 @@ const AuthPage = () => {
         // Store auth data (in your real app, not in Claude artifacts)
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
-
+        setUser(user);
         showToast('Google login successful!', 'success');
 
         // Navigate based on role
@@ -273,7 +276,7 @@ const AuthPage = () => {
             // Store auth data
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(userData));
-
+            setUser(user);
             showToast(message, 'success');
 
             // Handle instructor approval case

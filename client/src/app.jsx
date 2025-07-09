@@ -24,31 +24,14 @@ import AddTopic from './pages/AddTopic';
 import CoursesAdmin from './pages/CoursesAdmin';
 import QuizzesAdmin from './pages/QuizzesAdmin';
 import TopicsAdmin from './pages/TopicsAdmin';
+import { useContext } from 'react';
+import { AuthContext } from './contexts/AuthContext';
 
 const App = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useContext(AuthContext);
 
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-    setUser(storedUser);
-    setLoading(false);
-  }, []);
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          height: '100vh',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <Spin size="large" tip="Loading..." />
-      </div>
-    );
-  }
+    
 
   return (
     <Router>
@@ -69,7 +52,8 @@ const App = () => {
               <InstructorDashboard />
             ) : user?.role === 'student' ? (
               <StudentDashboard />
-            ) : (
+            )
+             : (
               <Navigate to="/auth" />
             )
           }
