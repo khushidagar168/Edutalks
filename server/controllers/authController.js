@@ -2,6 +2,9 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+// Add these imports to your authController.js
+import crypto from 'crypto';
+import { sendOTPEmail, sendPasswordResetConfirmation } from '../services/emailservice.js';
 
 // Helper functions
 const isValidEmail = (email) => {
@@ -370,5 +373,297 @@ export const changePassword = async (req, res) => {
   } catch (err) {
     console.error('Change password error:', err);
     res.status(500).json({ message: 'Failed to change password' });
+  }
+};
+
+
+
+
+// Generate 6-digit OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Rate limiting helper
+const checkRateLimit = (user) => {
+  const now = new Date();
+  const lastAttempt = user.resetPasswordLastAttempt;
+  const attempts = user.resetPasswordAttempts || 0;
+
+  // Reset attempts if last attempt was more than 1 hour ago
+  if (!lastAttempt || now - lastAttempt > 60 * 60 * 1000) {
+    return { allowed: true, attempts: 0 };
+  }
+
+  // Allow max 5 attempts per hour
+  if (attempts >= 5) {
+    const timeLeft = 60 - Math.floor((now - lastAttempt) / (60 * 1000));
+    return { 
+      allowed: false, 
+      attempts, 
+      timeLeft: timeLeft > 0 ? timeLeft : 0 
+    };
+  }
+
+  return { allowed: true, attempts };
+};
+
+// Request Password Reset OTP
+export const requestPasswordReset = async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.status(200).json({ 
+        message: 'If an account with this email exists, you will receive a password reset OTP.' 
+      });
+    }
+
+    // Check if user has a password (Google users can't reset password)
+    if (!user.password) {
+      return res.status(400).json({ 
+        message: 'This account was created with Google. Please use Google sign-in or contact support.' 
+      });
+    }
+
+    // Check rate limiting
+    const rateLimit = checkRateLimit(user);
+    if (!rateLimit.allowed) {
+      return res.status(429).json({ 
+        message: `Too many reset attempts. Please try again in ${rateLimit.timeLeft} minutes.`,
+        timeLeft: rateLimit.timeLeft
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+    // Save OTP to user
+    user.resetPasswordOTP = otp;
+    user.resetPasswordOTPExpiry = otpExpiry;
+    user.resetPasswordAttempts = rateLimit.attempts + 1;
+    user.resetPasswordLastAttempt = new Date();
+    await user.save();
+
+    // Send OTP email
+    const emailResult = await sendOTPEmail(user.email, otp, user.fullName);
+    
+    if (!emailResult.success) {
+      console.error('Failed to send OTP email:', emailResult.error);
+      return res.status(500).json({ 
+        message: 'Failed to send OTP email. Please try again.' 
+      });
+    }
+
+    res.status(200).json({ 
+      message: 'Password reset OTP sent to your email address.',
+      email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3') // Mask email
+    });
+  } catch (err) {
+    console.error('Request password reset error:', err);
+    res.status(500).json({ message: 'Failed to process password reset request. Please try again.' });
+  }
+};
+
+// Verify OTP
+export const verifyResetOTP = async (req, res) => {
+  const { email, otp } = req.body;
+  
+  try {
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email or OTP' });
+    }
+
+    // Check if OTP exists and is not expired
+    if (!user.resetPasswordOTP || !user.resetPasswordOTPExpiry) {
+      return res.status(400).json({ message: 'No password reset request found. Please request a new OTP.' });
+    }
+
+    if (new Date() > user.resetPasswordOTPExpiry) {
+      // Clean up expired OTP
+      user.resetPasswordOTP = null;
+      user.resetPasswordOTPExpiry = null;
+      await user.save();
+      
+      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Verify OTP
+    if (user.resetPasswordOTP !== otp.trim()) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    // Generate a temporary token for password reset (valid for 15 minutes)
+    const resetToken = jwt.sign(
+      { 
+        id: user._id, 
+        email: user.email,
+        purpose: 'password-reset'
+      }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '15m' }
+    );
+
+    res.status(200).json({ 
+      message: 'OTP verified successfully. You can now reset your password.',
+      resetToken,
+      expiresIn: '15 minutes'
+    });
+  } catch (err) {
+    console.error('Verify OTP error:', err);
+    res.status(500).json({ message: 'Failed to verify OTP. Please try again.' });
+  }
+};
+
+// Reset Password
+export const resetPassword = async (req, res) => {
+  const { resetToken, newPassword } = req.body;
+  
+  try {
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ message: 'Reset token and new password are required' });
+    }
+
+    // Validate new password
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({ 
+        message: 'Password must be at least 8 characters with uppercase, lowercase, and numbers' 
+      });
+    }
+
+    // Verify reset token
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Check if token is for password reset
+    if (decoded.purpose !== 'password-reset') {
+      return res.status(400).json({ message: 'Invalid reset token' });
+    }
+
+    // Find user
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    // Verify that the OTP process was completed (extra security)
+    if (!user.resetPasswordOTP || !user.resetPasswordOTPExpiry) {
+      return res.status(400).json({ message: 'Invalid password reset session. Please start over.' });
+    }
+
+    // Hash new password
+    
+    // Update user password and clear reset fields
+    user.password = newPassword;
+    user.resetPasswordOTP = null;
+    user.resetPasswordOTPExpiry = null;
+    user.resetPasswordAttempts = 0;
+    user.resetPasswordLastAttempt = null;
+    await user.save();
+
+    // Send confirmation email
+    const emailResult = await sendPasswordResetConfirmation(user.email, user.fullName);
+    if (!emailResult.success) {
+      console.error('Failed to send confirmation email:', emailResult.error);
+      // Don't fail the reset if email fails
+    }
+
+    res.status(200).json({ 
+      message: 'Password reset successful. You can now login with your new password.' 
+    });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Failed to reset password. Please try again.' });
+  }
+};
+
+// Resend OTP
+export const resendOTP = async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(400).json({ message: 'No password reset request found for this email' });
+    }
+
+    // Check if there's an existing reset request
+    if (!user.resetPasswordOTP || !user.resetPasswordOTPExpiry) {
+      return res.status(400).json({ message: 'No active password reset request found. Please start over.' });
+    }
+
+    // Check rate limiting (allow resend only after 1 minute)
+    const now = new Date();
+    const lastAttempt = user.resetPasswordLastAttempt;
+    if (lastAttempt && now - lastAttempt < 60 * 1000) {
+      const timeLeft = 60 - Math.floor((now - lastAttempt) / 1000);
+      return res.status(429).json({ 
+        message: `Please wait ${timeLeft} seconds before requesting a new OTP.`,
+        timeLeft
+      });
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+    // Update user
+    user.resetPasswordOTP = otp;
+    user.resetPasswordOTPExpiry = otpExpiry;
+    user.resetPasswordLastAttempt = new Date();
+    await user.save();
+
+    // Send OTP email
+    const emailResult = await sendOTPEmail(user.email, otp, user.fullName);
+    
+    if (!emailResult.success) {
+      console.error('Failed to send OTP email:', emailResult.error);
+      return res.status(500).json({ 
+        message: 'Failed to send OTP email. Please try again.' 
+      });
+    }
+
+    res.status(200).json({ 
+      message: 'New OTP sent to your email address.',
+      email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3') // Mask email
+    });
+  } catch (err) {
+    console.error('Resend OTP error:', err);
+    res.status(500).json({ message: 'Failed to resend OTP. Please try again.' });
   }
 };

@@ -599,20 +599,30 @@ const AuthPage = () => {
             Continue with Google
           </button>
 
-          {/* Toggle Auth Mode */}
-          {(isLogin || canRegister) && (
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-                <button
-                  onClick={() => setIsLogin(!isLogin)}
-                  className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline"
-                >
-                  {isLogin ? 'Sign up' : 'Sign in'}
-                </button>
-              </p>
-            </div>
-          )}
+         {/* Toggle Auth Mode */}
+{(isLogin || canRegister) && (
+  <div className="mt-6 text-center flex flex-col sm:flex-row items-center justify-center gap-4">
+    <div className="text-sm text-gray-600">
+      {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+      <button
+        onClick={() => setIsLogin(!isLogin)}
+        className="ml-1 text-blue-600 hover:text-blue-500 font-medium transition-colors duration-200"
+      >
+        {isLogin ? 'Sign up' : 'Sign in'}
+      </button>
+    </div>
+
+    <div>
+      <button
+        onClick={() => navigate('/forgot-password')}
+        className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
+      >
+        Forgot Password?
+      </button>
+    </div>
+  </div>
+)}
+
         </div>
       </div>
     </div>

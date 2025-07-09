@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     validate: {
-      validator: function(password) {
+      validator: function (password) {
         if (!password && !this.googleId) return false;
         if (password) return password.length >= 8;
         return true;
@@ -48,6 +48,23 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // Add these fields to your User schema
+  resetPasswordOTP: {
+    type: String,
+    default: null
+  },
+  resetPasswordOTPExpiry: {
+    type: Date,
+    default: null
+  },
+  resetPasswordAttempts: {
+    type: Number,
+    default: 0
+  },
+  resetPasswordLastAttempt: {
+    type: Date,
+    default: null
   },
   profilePicture: {
     type: String,

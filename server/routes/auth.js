@@ -8,7 +8,11 @@ import {
   logout,
   getProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  requestPasswordReset,
+  verifyResetOTP,
+  resetPassword,
+  resendOTP
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -25,5 +29,11 @@ router.post('/logout', logout);
 router.get('/profile', authenticateToken, getProfile);
 router.put('/profile', authenticateToken, updateProfile);
 router.put('/change-password', authenticateToken, changePassword);
+
+
+router.post('/forgot-password', requestPasswordReset);
+router.post('/verify-otp', verifyResetOTP);
+router.post('/reset-password', resetPassword);
+router.post('/resend-otp', resendOTP);
 
 export default router;

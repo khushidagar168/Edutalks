@@ -26,6 +26,7 @@ import QuizzesAdmin from './pages/QuizzesAdmin';
 import TopicsAdmin from './pages/TopicsAdmin';
 import { useContext } from 'react';
 import { AuthContext } from './contexts/AuthContext';
+import ForgotPassword from './pages/ResetPasswordOTP';
 
 const App = () => {
   const { user } = useContext(AuthContext);
@@ -71,6 +72,7 @@ const App = () => {
         <Route path="/my-courses" element={<MyCourses />} />
         <Route path="/dashboard/add-quiz" element={<AddQuiz />} />
         <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/forgot-password" element={<ForgotPassword/>} />
       </Routes>
     </Router>
   );
