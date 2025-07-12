@@ -253,12 +253,12 @@ const AuthPage = () => {
         // Store auth data (in your real app, not in Claude artifacts)
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
-        setUser(user);
+        setUser(userData);
         showToast('Google login successful!', 'success');
 
         // Navigate based on role
-        const redirectPath = location.state?.from?.pathname || getDashboardPath(userData.role);
-        setTimeout(() => navigate(redirectPath), 1000);
+        // const redirectPath = location.state?.from?.pathname || getDashboardPath(userData.role);
+        setTimeout(() => navigate('/dashboard'), 1000);
 
       } catch (loginError) {
         // If login fails, try to register (only for non-admin roles)
