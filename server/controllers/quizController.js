@@ -126,12 +126,8 @@ const getInstructorQuizzes = async (req, res) => {
 const getQuizById = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const userRole = req.user.role;
 
-    const quiz = await Quiz.findById(id)
-      .populate('instructor_id', 'name email')
-      .populate('course_id', 'title description');
+    const quiz = await Quiz.findById(id);
 
     if (!quiz) {
       return res.status(404).json({
@@ -140,60 +136,13 @@ const getQuizById = async (req, res) => {
       });
     }
 
-    // Check permissions
-    if (userRole === 'instructor' && quiz.instructor_id._id.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
-    }
-
-    // If student, check if quiz is published and get attempt history
-    if (userRole === 'student') {
-      if (quiz.status !== 'published') {
-        return res.status(403).json({
-          success: false,
-          message: 'Quiz is not available'
-        });
-      }
-
-      // Get student's previous attempts
-      const attempts = await QuizAttempt.find({
-        quiz_id: id,
-        student_id: userId
-      }).sort({ attempt_number: -1 });
-
-      // Check if student can take the quiz
-      const canTakeQuiz = quiz.settings.max_attempts === -1 || attempts.length < quiz.settings.max_attempts;
-
-      return res.status(200).json({
-        success: true,
-        quiz: {
-          ...quiz.toObject(),
-          questions: quiz.questions.map(q => ({
-            ...q.toObject(),
-            correct_answer_index: undefined,
-            options: q.options.map(opt => ({
-              text: opt.text,
-              _id: opt._id
-            }))
-          }))
-        },
-        attempts: attempts.map(attempt => ({
-          attempt_number: attempt.attempt_number,
-          status: attempt.status,
-          score_percentage: attempt.score_percentage,
-          is_passed: attempt.is_passed,
-          created_at: attempt.created_at
-        })),
-        canTakeQuiz
-      });
-    }
-
+    // ✅ Send the quiz if found
     res.status(200).json({
       success: true,
-      quiz
+      message: 'Quiz fetched successfully',
+      quiz: quiz
     });
+
   } catch (error) {
     console.error('Get quiz error:', error);
     res.status(500).json({
@@ -203,6 +152,7 @@ const getQuizById = async (req, res) => {
     });
   }
 };
+
 
 // Update quiz
 const updateQuiz = async (req, res) => {

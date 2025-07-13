@@ -20,7 +20,7 @@ const NavbarStudent = () => {
         <Link to="/pronunciation">Pronunciation</Link>
         <Link to="/daily-topics">Daily Topics</Link>
         <Link to="/subscriptions">Subscriptions</Link>
-        <Link to="/my-courses">My Courses</Link>
+        {/* <Link to="/my-courses">My Courses</Link> */}
         <Link to="/profile">Profile</Link>
         <button onClick={handleLogout} className="text-red-500 ml-4 hover:underline">
           Logout

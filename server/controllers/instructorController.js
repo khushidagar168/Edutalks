@@ -2,6 +2,7 @@
 import Course from '../models/Course.js';
 import Quiz from '../models/Quiz.js';
 import Topic from '../models/Topic.js';
+import Paragraph from '../models/AIParagraph.js'
 
 export const addCourse = async (req, res) => {
   try {
@@ -68,15 +69,19 @@ export const getStats = async (req, res) => {
     // Find quizzes created by this instructor
     const topics = await Topic.find({ instructor_id: id });
 
+    const paragraphs = await Paragraph.find({ instructorId: id });
+
 
     res.status(200).json({
       success: true,
       coursesCount: courses.length,
       quizzesCount: quizzes.length,
       topicsCount: topics.length,
+      paragraphsCount: paragraphs.length,
       courses,
       quizzes,
-      topics
+      topics,
+      paragraphs
     });
   } catch (error) {
     console.error('Error in getStats:', error);

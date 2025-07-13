@@ -14,6 +14,7 @@ const courseSchema = new mongoose.Schema({
   category: { type: String, required: true },
   image: { type: String }, // URL to image
   pdf: { type: String }, // URL to PDF
+  videos: [{ type: String }], // URL to PDF
   owner_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   reviews: [reviewSchema],
   createdAt: { type: Date, default: Date.now }

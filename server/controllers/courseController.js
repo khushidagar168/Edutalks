@@ -49,6 +49,9 @@ export const getCourses = async (req, res) => {
   }
 };
 
+//
+
+
 // Add a new course
 export const addCourse = async (req, res) => {
   try {
@@ -79,13 +82,20 @@ export const addCourse = async (req, res) => {
     }
 
     // Handle file uploads
-    let imageUrl, pdfUrl;
+    let imageUrl, pdfUrl, videoUrls = [];
     try {
       if (req.files?.image) {
         imageUrl = await uploadFile(req.files.image[0], 'images');
       }
       if (req.files?.pdf) {
         pdfUrl = await uploadFile(req.files.pdf[0], 'documents');
+      }
+
+      if (req.files?.videos && req.files.videos.length > 0) {
+        for (const video of req.files.videos) {
+          const videoUrl = await uploadFile(video, 'videos');
+          videoUrls.push(videoUrl);
+        }
       }
     } catch (err) {
       console.error('File upload error:', err);
@@ -94,7 +104,6 @@ export const addCourse = async (req, res) => {
         error: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }
-
     // Create new course
     const newCourse = new Course({
       title: title.trim(),
@@ -104,6 +113,7 @@ export const addCourse = async (req, res) => {
       owner_id,
       image: imageUrl,
       pdf: pdfUrl,
+      videos: videoUrls, // ✅ Store array of video URLs
       tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
       level: level || 'beginner',
       duration: duration ? parseInt(duration) : null,
@@ -130,6 +140,7 @@ export const addCourse = async (req, res) => {
     });
   }
 };
+
 
 // Update an existing course
 export const updateCourse = async (req, res) => {
@@ -297,7 +308,7 @@ export const updateCourseAdmin = async (req, res) => {
 export const getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
-    const course = await Course.findById(id).populate('owner_id', 'name email');
+    const course = await Course.findById(id);
     
     if (!course) {
       return res.status(404).json({

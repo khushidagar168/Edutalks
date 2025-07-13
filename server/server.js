@@ -11,6 +11,7 @@ import quizAttemptRoutes from './routes/quizAttempt.js';
 import courseRoutes from "./routes/courses.js"
 import quizRoutes from './routes/quizzes.js';
 import topicRoutes from "./routes/topic.js"
+import paraRoutes from "./routes/paragraph.js"
 
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/quiz-attempts', quizAttemptRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/topics', topicRoutes);
+app.use('/api/paragraphs', paraRoutes);
 
 
 mongoose.connect(process.env.MONGO_URI)

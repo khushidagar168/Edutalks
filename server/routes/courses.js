@@ -1,5 +1,5 @@
 import express from 'express';
-import { getCourses, addCourse, updateCourse , deleteCourse} from '../controllers/courseController.js';
+import { getCourses, addCourse, updateCourse , deleteCourse, getCourseById} from '../controllers/courseController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { authenticateAdmin } from '../middleware/auth.js';
 import { uploadMiddleware } from '../middleware/uploadMiddleware.js';
@@ -8,6 +8,7 @@ const router = express.Router();
 
 
 router.get('/', getCourses);
+router.get('/:id', getCourseById);
 router.post('/add',
   uploadMiddleware,
   addCourse

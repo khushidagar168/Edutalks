@@ -27,6 +27,9 @@ import TopicsAdmin from './pages/TopicsAdmin';
 import { useContext } from 'react';
 import { AuthContext } from './contexts/AuthContext';
 import ForgotPassword from './pages/ResetPasswordOTP';
+import CoursebyID from "./pages/CourseForStudent"
+import QuizAttempt from './pages/AttemptQuiz';
+import ParagraphListAdmin from './pages/admin/AdminParagraphs';
 
 const App = () => {
   const { user } = useContext(AuthContext);
@@ -62,6 +65,9 @@ const App = () => {
 
         <Route path="/courses" element={<Courses />} />
         <Route path="/admin/courses" element={<CoursesAdmin />} />
+        <Route path="/admin/paragraphs" element={<ParagraphListAdmin />} />
+        <Route path="/courses/:id" element={<CoursebyID />} />
+        <Route path="/quizzes/:id" element={<QuizAttempt />} />
         <Route path="/admin/quizzes" element={<QuizzesAdmin />} />
         <Route path="/admin/topics" element={<TopicsAdmin />} />
         <Route path="/daily-topics" element={<DailyTopics />} />
