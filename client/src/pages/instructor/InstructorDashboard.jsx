@@ -187,7 +187,7 @@ const InstructorDashboard = () => {
         return;
       }
 
-      await axios.post('/paragraphs', paragraphForm, {
+      await axios.post('/paragraphs', {...paragraphForm, instructorId: user?.id}, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
