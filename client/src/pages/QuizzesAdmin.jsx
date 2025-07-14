@@ -25,10 +25,10 @@ const QuizzesAdmin = () => {
         }
     };
 
-    const handleDelete = async (quizId) => {
+    const handleDelete = async (quizId, userId) => {
         if (window.confirm('Are you sure you want to delete this quiz?')) {
             try {
-                await axios.delete(`/quizzes/${quizId}`, {
+                await axios.delete(`/quizzes/${quizId}`, {userId: userId} , {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`
                     }
@@ -138,7 +138,7 @@ const QuizzesAdmin = () => {
                                         <Edit size={18} />
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(quiz._id)}
+                                        onClick={() => handleDelete(quiz._id, quiz.instructor_id)}
                                         className="text-red-600 hover:text-red-800 p-1"
                                         title="Delete"
                                     >

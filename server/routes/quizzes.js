@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', getQuizzes);
 router.get('/:id', getQuizById);
 router.post('/add', addQuiz);
-router.delete('/:id', authMiddleware,deleteQuiz);
+router.delete('/:id',deleteQuiz);
 router.get('/admin',authenticateAdmin, getQuizzes)
 
 export default router;

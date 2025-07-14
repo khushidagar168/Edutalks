@@ -34,8 +34,10 @@ const ParagraphListAdmin = () => {
     if (!window.confirm('Are you sure you want to delete this paragraph?')) return;
 
     try {
-      await axios.delete(`/api/paragraphs/${id}`);
+      await axios.delete(`/paragraphs/${id}`);
       setParagraphs(prev => prev.filter(p => p._id !== id));
+      alert('Deleted successfully');
+
     } catch (err) {
       console.error('Error deleting paragraph:', err);
       alert('Could not delete paragraph.');
