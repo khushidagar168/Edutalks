@@ -12,8 +12,9 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true,
-    unique: true,
+    required: false,
+    unique: false,
+    sparse: true,
     lowercase: true,
     trim: true,
     match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email address']
@@ -32,6 +33,10 @@ const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
     sparse: true,
+    unique: true
+  },
+  mobile: {
+    type: String,
     unique: true
   },
   role: {
@@ -146,7 +151,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes
-userSchema.index({ email: 1 });
+// userSchema.index({ email: 1 });
 userSchema.index({ googleId: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ 'verification.email_verification_token': 1 });

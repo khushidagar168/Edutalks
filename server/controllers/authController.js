@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 // Add these imports to your authController.js
 import crypto from 'crypto';
 import { sendOTPEmail, sendPasswordResetConfirmation } from '../services/emailservice.js';
+import { sendSMS } from '../services/smsService.js';
 
 // Helper functions
 const isValidEmail = (email) => {
@@ -665,5 +666,198 @@ export const resendOTP = async (req, res) => {
   } catch (err) {
     console.error('Resend OTP error:', err);
     res.status(500).json({ message: 'Failed to resend OTP. Please try again.' });
+  }
+};
+
+const generateMobileOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Send Mobile OTP
+export const sendMobileOTP = async (req, res) => {
+  const { mobile } = req.body;
+  
+  try {
+    if (!mobile) {
+      return res.status(400).json({ message: 'Mobile number is required' });
+    }
+
+    // Validate mobile format (basic validation)
+    const mobileRegex = /^[0-9]{10,15}$/;
+    if (!mobileRegex.test(mobile)) {
+      return res.status(400).json({ message: 'Invalid mobile number format' });
+    }
+
+    // Check if mobile is already registered (for login)
+    const existingUser = await User.findOne({ mobile });
+    if (existingUser && existingUser.role !== 'student') {
+      return res.status(400).json({ 
+        message: 'Only students can login with mobile. Please use email login.' 
+      });
+    }
+
+    // Generate OTP
+    const otp = generateMobileOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // In production, you would save this to the user record or a temporary store
+    // For demo, we'll just return it (in production, you would send via SMS)
+    // console.log(`OTP for ${mobile}: ${otp}`); // Remove this in production
+
+    // In production, you would use an SMS service like Twilio:
+    await sendSMS(`+91-${mobile}`, `Your OTP is: ${otp}`);
+
+    res.status(200).json({ 
+      message: 'OTP sent to mobile number',
+      mobile: mobile.replace(/(\d{3})\d+(\d{3})/, '$1****$2'), // Mask mobile
+      otpExpiry: otpExpiry // In production, don't send this to client
+    });
+  } catch (err) {
+    console.error('Send mobile OTP error:', err);
+    res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
+  }
+};
+
+// Verify Mobile OTP
+export const verifyMobileOTP = async (req, res) => {
+  const { mobile, otp } = req.body;
+  
+  try {
+    if (!mobile || !otp) {
+      return res.status(400).json({ message: 'Mobile number and OTP are required' });
+    }
+
+    // In production, you would verify against stored OTP
+    // For demo, we'll accept any 6-digit OTP
+    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
+      return res.status(400).json({ message: 'Invalid OTP format' });
+    }
+
+    // Check if user exists (for login)
+    const user = await User.findOne({ mobile });
+    if (user && user.role !== 'student') {
+      return res.status(400).json({ 
+        message: 'Only students can login with mobile. Please use email login.' 
+      });
+    }
+
+    // Generate a temporary token for registration/login
+    const tempToken = jwt.sign(
+      { mobile, otp, purpose: 'mobile-verification' },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    res.status(200).json({ 
+      message: 'OTP verified successfully',
+      tempToken,
+      expiresIn: '15 minutes'
+    });
+  } catch (err) {
+    console.error('Verify mobile OTP error:', err);
+    res.status(500).json({ message: 'Failed to verify OTP. Please try again.' });
+  }
+};
+
+// Register with Mobile
+export const registerWithMobile = async (req, res) => {
+  const {  fullName, password, mobile } = req.body;
+  
+  try {
+    if (!fullName || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // // Verify temp token
+    // let decoded;
+    // try {
+    //   decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+    // } catch (err) {
+    //   return res.status(400).json({ message: 'Invalid or expired verification token' });
+    // }
+
+    // if (decoded.purpose !== 'mobile-verification') {
+    //   return res.status(400).json({ message: 'Invalid token purpose' });
+    // }
+
+    // const { mobile } = decoded;
+
+    // Check if mobile already registered
+    const existingUser = await User.findOne({ mobile });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Mobile number already registered' });
+    }
+
+    // Validate password
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ 
+        message: 'Password must be at least 8 characters with uppercase, lowercase, and numbers' 
+      });
+    }
+
+    // Create new user
+    const user = new User({
+      fullName: fullName.trim(),
+      mobile,
+      email:'',
+      password: await bcrypt.hash(password, 12),
+      role: 'student', // Only students can register with mobile
+      isApproved: true,
+      mobileVerified: true
+    });
+
+    await user.save();
+
+    // Generate auth token
+    const authToken = generateToken(user);
+
+    res.status(201).json({
+      message: 'Registration successful!',
+      token: authToken,
+      user: sanitizeUser(user)
+    });
+  } catch (err) {
+    console.error('Mobile registration error:', err);
+    res.status(500).json({ message: 'Registration failed. Please try again.' });
+  }
+};
+
+// Login with Mobile
+export const loginWithMobile = async (req, res) => {
+  const { mobile, password } = req.body;
+  
+  try {
+    
+
+
+    // Find user
+    const user = await User.findOne({ mobile });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found. Please register first.' });
+    }
+
+    // Verify password if provided (optional for OTP-only login)
+    if (password) {
+      if (!user.password) {
+        return res.status(400).json({ message: 'Password login not available for this account' });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid password' });
+      }
+    }
+
+    // Generate auth token
+    const authToken = generateToken(user);
+
+    res.status(200).json({
+      message: 'Login successful',
+      token: authToken,
+      user: sanitizeUser(user)
+    });
+  } catch (err) {
+    console.error('Mobile login error:', err);
+    res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 };

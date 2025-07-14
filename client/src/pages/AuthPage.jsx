@@ -19,7 +19,9 @@ import {
   Shield,
   BookOpen,
   ChevronDown,
-  X
+  X,
+  Smartphone,
+  MessageSquare
 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import NavbarLanding from '../components/NavbarLanding';
@@ -63,6 +65,7 @@ const AuthPage = () => {
   const [form, setForm] = useState({
     fullName: '',
     email: '',
+    mobile: '',
     password: '',
     confirmPassword: '',
     role: 'student'
@@ -74,6 +77,10 @@ const AuthPage = () => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'error' });
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [useMobile, setUseMobile] = useState(false); // Toggle between email/mobile
+  const [otpSent, setOtpSent] = useState(false); // Track if OTP has been sent
+  const [otp, setOtp] = useState(''); // Store OTP input
+  const [resendTimer, setResendTimer] = useState(0); // Resend OTP timer
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -87,26 +94,42 @@ const AuthPage = () => {
   const hideToast = () => {
     setToast({ ...toast, visible: false });
   };
-
-
   useEffect(() => {
     // Clear stale auth data on mount
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setUser(null)
+    setUser(null);
   }, []);
 
-
   useEffect(() => {
-    // Clear form when switching between login/register
-    setForm({ fullName: '', email: '', password: '', confirmPassword: '', role: 'student' });
+    // Reset form and errors when switching between login/register
+    setForm({ fullName: '', email: '', mobile: '', password: '', confirmPassword: '', role: 'student' });
     setErrors({});
+    setUseMobile(false);
+    setOtpSent(false);
+    setOtp('');
     hideToast();
   }, [isLogin]);
+
+  // Handle resend OTP timer
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  const validateMobile = (mobile) => {
+    const mobileRegex = /^[0-9]{10,15}$/;
+    return mobileRegex.test(mobile);
   };
 
   const validatePassword = (password) => {
@@ -130,19 +153,30 @@ const AuthPage = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!form.email) {
-      newErrors.email = 'Email is required';
-    } else if (!validateEmail(form.email)) {
-      newErrors.email = 'Please enter a valid email address';
+    // Validate based on authentication method
+    if (form.role === 'student' && useMobile) {
+      if (!form.mobile) {
+        newErrors.mobile = 'Mobile number is required';
+      } else if (!validateMobile(form.mobile)) {
+        newErrors.mobile = 'Please enter a valid mobile number';
+      }
+    } else {
+      if (!form.email) {
+        newErrors.email = 'Email is required';
+      } else if (!validateEmail(form.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
     }
 
-    if (!form.password) {
-      newErrors.password = 'Password is required';
-    } else if (!isLogin && !validatePassword(form.password)) {
-      newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and numbers';
+    if (!isLogin || !useMobile || !otpSent) {
+      if (!form.password) {
+        newErrors.password = 'Password is required';
+      } else if (!isLogin && !validatePassword(form.password)) {
+        newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and numbers';
+      }
     }
 
-    if (!isLogin) {
+    if (!isLogin && canRegister) {
       if (!form.fullName) {
         newErrors.fullName = 'Full name is required';
       } else if (form.fullName.length < 2) {
@@ -154,6 +188,12 @@ const AuthPage = () => {
       } else if (form.password !== form.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match';
       }
+    }
+
+    if (otpSent && !otp) {
+      newErrors.otp = 'OTP is required';
+    } else if (otpSent && otp.length !== 6) {
+      newErrors.otp = 'OTP must be 6 digits';
     }
 
     setErrors(newErrors);
@@ -175,6 +215,50 @@ const AuthPage = () => {
     }
   };
 
+  const handleOtpChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+    setOtp(value);
+    if (errors.otp) {
+      setErrors(prev => ({ ...prev, otp: '' }));
+    }
+  };
+
+  const sendOtp = async () => {
+    if (!form.mobile) {
+      showToast('Mobile number is required', 'error');
+      return;
+    }
+
+    if (!validateMobile(form.mobile)) {
+      showToast('Please enter a valid mobile number', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Call your backend API to send OTP
+      await axios.post('/auth/send-mobile-otp', {
+        mobile: form.mobile,
+        isLogin,
+        role: form.role
+      });
+
+      setOtpSent(true);
+      setResendTimer(60); // 60 seconds timer
+      showToast('OTP sent successfully!', 'success');
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to send OTP. Please try again.';
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    if (resendTimer > 0) return;
+    await sendOtp();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -190,33 +274,59 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
-        const response = await axios.post('/auth/login', {
-          email: form.email,
-          password: form.password,
-          role: form.role,
-        });
-        const { token, user } = response.data;
-        
-        // Store auth data
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        setUser(user);
-        showToast('Login successful!', 'success');
+        if (form.role === 'student' && useMobile && otpSent) {
+          // Mobile OTP login
+          const response = await axios.post('/auth/login-mobile', {
+            mobile: form.mobile,
+            otp,
+            role: form.role,
+          });
+          const { token, user } = response.data;
 
-        // Navigate based on role
-        const redirectPath = location.state?.from?.pathname || getDashboardPath(user.role);
-       setTimeout(() => navigate('/dashboard'), 2000);
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+          setUser(user);
+          showToast('Login successful!', 'success');
+          setTimeout(() => navigate('/dashboard'), 2000);
+        } else {
+          // Email login
+          const response = await axios.post('/auth/login', {
+            email: form.email,
+            password: form.password,
+            role: form.role,
+          });
+          const { token, user } = response.data;
 
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+          setUser(user);
+          showToast('Login successful!', 'success');
+          setTimeout(() => navigate('/dashboard'), 2000);
+        }
       } else {
-        await axios.post('/auth/register', {
-          fullName: form.fullName,
-          email: form.email,
-          password: form.password,
-          role: form.role,
-        });
-
-        showToast('Registration successful! Please login to continue.', 'success');
-        setTimeout(() => setIsLogin(true), 2000);
+        // Registration
+        if (form.role === 'student' && useMobile && otpSent) {
+          // Mobile registration
+          await axios.post('/auth/register-mobile', {
+            fullName: form.fullName,
+            mobile: form.mobile,
+            password: form.password,
+            otp,
+            role: form.role,
+          });
+          showToast('Registration successful! Please login to continue.', 'success');
+          setTimeout(() => setIsLogin(true), 2000);
+        } else {
+          // Email registration
+          await axios.post('/auth/register', {
+            fullName: form.fullName,
+            email: form.email,
+            password: form.password,
+            role: form.role,
+          });
+          showToast('Registration successful! Please login to continue.', 'success');
+          setTimeout(() => setIsLogin(true), 2000);
+        }
       }
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'An error occurred. Please try again.';
@@ -226,6 +336,7 @@ const AuthPage = () => {
     }
   };
 
+  // ... (keep your existing handleGoogleAuth, getDashboardPath, getPasswordStrengthColor, getPasswordStrengthText functions)
   const handleGoogleAuth = async () => {
     setIsLoading(true);
     hideToast();
@@ -325,7 +436,6 @@ const AuthPage = () => {
     if (passwordStrength <= 4) return 'Good';
     return 'Strong';
   };
-
   const roleOptions = [
     {
       value: 'student',
@@ -354,6 +464,9 @@ const AuthPage = () => {
 
   // Check if user can register based on role selection
   const canRegister = form.role !== 'admin';
+
+  // Check if mobile login is allowed (only for students)
+  const canUseMobile = form.role === 'student';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-8">
@@ -384,8 +497,6 @@ const AuthPage = () => {
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-6">
-
-
             {/* Admin Login Only Notice */}
             {form.role === 'admin' && !isLogin && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -427,67 +538,168 @@ const AuthPage = () => {
               </div>
             )}
 
-            {/* Email */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.email ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  placeholder="Enter your email"
-                />
-              </div>
-              {errors.email && (
-                <p className="text-red-600 text-sm">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.password ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  placeholder="Enter your password"
-                />
+            {/* Authentication Method Toggle (Only for students) */}
+            {canUseMobile && (
+              <div className="flex items-center justify-center space-x-4">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setUseMobile(false)}
+                  className={`px-4 py-2 rounded-lg flex items-center ${!useMobile ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseMobile(true)}
+                  className={`px-4 py-2 rounded-lg flex items-center ${useMobile ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}
+                >
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Mobile
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-red-600 text-sm">{errors.password}</p>
-              )}
+            )}
 
-              {/* Password Strength Indicator (Register only and not admin) */}
-              {!isLogin && canRegister && form.password && (
-                <div className="mt-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="flex-1 h-2 bg-gray-200 rounded-full">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
-                        style={{ width: `${(passwordStrength / 5) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-gray-600">{getPasswordStrengthText()}</span>
-                  </div>
+            {/* Email or Mobile Input */}
+            {!useMobile ? (
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.email ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    placeholder="Enter your email"
+                  />
                 </div>
-              )}
-            </div>
+                {errors.email && (
+                  <p className="text-red-600 text-sm">{errors.email}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Mobile Number</label>
+                <div className="relative">
+                  <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    name="mobile"
+                    value={form.mobile}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.mobile ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    placeholder="Enter your mobile number"
+                    maxLength="15"
+                  />
+                </div>
+                {errors.mobile && (
+                  <p className="text-red-600 text-sm">{errors.mobile}</p>
+                )}
+                {!otpSent && form.mobile && (
+                  <button
+                    type="button"
+                    onClick={sendOtp}
+                    disabled={isLoading}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200 flex items-center"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="animate-spin h-4 w-4 mr-1" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Send OTP
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* OTP Input (Only for mobile login/register) */}
+            {otpSent && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">OTP</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={handleOtpChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.otp ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    placeholder="Enter 6-digit OTP"
+                    maxLength="6"
+                  />
+                </div>
+                {errors.otp && (
+                  <p className="text-red-600 text-sm">{errors.otp}</p>
+                )}
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-gray-500">
+                    {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Didn't receive OTP?"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={resendOtp}
+                    disabled={resendTimer > 0}
+                    className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Password (Not needed for OTP login) */}
+            {(!isLogin || !useMobile || !otpSent) && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.password ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-600 text-sm">{errors.password}</p>
+                )}
+
+                {/* Password Strength Indicator (Register only and not admin) */}
+                {!isLogin && canRegister && form.password && (
+                  <div className="mt-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
+                          style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-gray-600">{getPasswordStrengthText()}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Confirm Password (Register only and not admin) */}
             {!isLogin && canRegister && (
@@ -517,6 +729,7 @@ const AuthPage = () => {
                 )}
               </div>
             )}
+
             {/* Role Selection Dropdown */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">I am a:</label>
@@ -545,6 +758,11 @@ const AuthPage = () => {
                         onClick={() => {
                           setForm(prev => ({ ...prev, role: option.value }));
                           setIsRoleDropdownOpen(false);
+                          // Reset mobile auth if switching to non-student role
+                          if (option.value !== 'student') {
+                            setUseMobile(false);
+                            setOtpSent(false);
+                          }
                         }}
                         className={`w-full flex items-center p-3 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${form.role === option.value ? 'bg-blue-50' : ''
                           }`}
@@ -560,6 +778,7 @@ const AuthPage = () => {
                 )}
               </div>
             </div>
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -599,30 +818,29 @@ const AuthPage = () => {
             Continue with Google
           </button>
 
-         {/* Toggle Auth Mode */}
-{(isLogin || canRegister) && (
-  <div className="mt-6 text-center flex flex-col sm:flex-row items-center justify-center gap-4">
-    <div className="text-sm text-gray-600">
-      {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-      <button
-        onClick={() => setIsLogin(!isLogin)}
-        className="ml-1 text-blue-600 hover:text-blue-500 font-medium transition-colors duration-200"
-      >
-        {isLogin ? 'Sign up' : 'Sign in'}
-      </button>
-    </div>
+          {/* Toggle Auth Mode */}
+          {(isLogin || canRegister) && (
+            <div className="mt-6 text-center flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="text-sm text-gray-600">
+                {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+                <button
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="ml-1 text-blue-600 hover:text-blue-500 font-medium transition-colors duration-200"
+                >
+                  {isLogin ? 'Sign up' : 'Sign in'}
+                </button>
+              </div>
 
-    <div>
-      <button
-        onClick={() => navigate('/forgot-password')}
-        className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
-      >
-        Forgot Password?
-      </button>
-    </div>
-  </div>
-)}
-
+              <div>
+                <button
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

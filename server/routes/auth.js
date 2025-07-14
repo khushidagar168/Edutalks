@@ -12,7 +12,11 @@ import {
   requestPasswordReset,
   verifyResetOTP,
   resetPassword,
-  resendOTP
+  resendOTP,
+  sendMobileOTP,
+  verifyMobileOTP,
+  registerWithMobile,
+  loginWithMobile
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -25,6 +29,8 @@ router.post('/google-login', googleLogin);
 router.post('/google-register', googleRegister);
 router.post('/logout', logout);
 
+
+
 // Protected routes (require authentication)
 router.get('/profile', authenticateToken, getProfile);
 router.put('/profile', authenticateToken, updateProfile);
@@ -35,5 +41,12 @@ router.post('/forgot-password', requestPasswordReset);
 router.post('/verify-otp', verifyResetOTP);
 router.post('/reset-password', resetPassword);
 router.post('/resend-otp', resendOTP);
+
+
+// Mobile authentication routes
+router.post('/send-mobile-otp', sendMobileOTP);
+router.post('/verify-mobile-otp', verifyMobileOTP);
+router.post('/register-mobile', registerWithMobile);
+router.post('/login-mobile', loginWithMobile);
 
 export default router;
