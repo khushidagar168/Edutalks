@@ -8,6 +8,8 @@ import {
   getParagraphsByInstructor
 } from '../controllers/paragraphController.js';
 
+import { checkStudentSubscription } from '../middleware/auth.js';
+
 const router = express.Router();
 // routes/paragraph.js
 
@@ -17,7 +19,7 @@ router.get('/instructor/:instructorId', getParagraphsByInstructor);
 router.post('/', createParagraph);
 
 // GET /api/paragraphs
-router.get('/', getAllParagraphs);
+router.get('/', checkStudentSubscription, getAllParagraphs);
 
 // GET /api/paragraphs/:id
 router.get('/:id', getParagraphById);

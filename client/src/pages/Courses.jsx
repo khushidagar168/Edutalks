@@ -29,7 +29,6 @@ const Courses = () => {
   }, [search, category]);
 
   const handleImageError = (e) => {
-    console.log('Image failed to load:', e.target.src);
     e.target.src = 'https://placehold.co/600x400';
   };
 

@@ -198,7 +198,6 @@ const fetchQuiz = async () => {
   try {
     setLoading(true);
     setError(null);
-    console.log('Fetching quiz with ID:', id);
     
     const response = await axios.get(`/quizzes/${id}`);
     

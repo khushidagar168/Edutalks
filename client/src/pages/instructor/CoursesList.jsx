@@ -92,7 +92,6 @@ const CourseList = ({
   };
 
   const openDeleteModal = (course) => {
-    console.log(course)
     setSelectedCourse(course);
     setShowDeleteModal(true);
   };

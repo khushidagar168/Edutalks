@@ -102,6 +102,56 @@ export const authenticateAdmin = async (req, res, next) => {
   }
 };
 
+export const checkStudentSubscription = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized. Please login.' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return res.status(401).json({ message: 'User not found.' });
+    }
+    if (user.role === 'student') {
+      const now = new Date();
+      if (!user.subscription_upto || user.subscription_upto < now) {
+        return res.status(403).json({
+          message: 'Your subscription has expired. Please renew to continue.'
+        });
+      }
+    }
+
+    // attach user to req for downstream
+    req.user = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName,
+      subscription_upto: user.subscription_upto,
+      subscription_type: user.subscription_type
+    };
+
+    next();
+  } catch (error) {
+    console.error('Student subscription middleware error:', error);
+
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired' });
+    }
+
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    return res.status(500).json({ message: 'Subscription check failed.' });
+  }
+};
+
 // ✅ Role-based access middleware
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {

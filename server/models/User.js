@@ -30,6 +30,15 @@ const userSchema = new mongoose.Schema({
       message: 'Password must be at least 8 characters long'
     }
   },
+  subscription_upto: {
+    type: Date,
+    default: null
+  },
+  subscription_type: {
+    type: String,
+    enum: ['trial', 'subscribed'],
+    default: 'trial'
+  },
   googleId: {
     type: String,
     sparse: true,

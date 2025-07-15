@@ -56,7 +56,6 @@ const QuizList = () => {
     const fetchQuizzes = async () => {
       try {
         const res = await axios.get('/quizzes');
-        console.log('Quiz data received:', res.data);
         setQuizzes(res.data);
       } catch (err) {
         console.error('Failed to fetch quizzes', err);

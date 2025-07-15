@@ -11,7 +11,6 @@ import DailyTopics from './pages/DailyTopics';
 import Quizzes from './pages/Quizzes';
 import Pronunciation from './pages/Pronunciation';
 import Profile from './pages/Profile';
-import Subscriptions from './pages/Subscriptions';
 import MyCourses from './pages/MyCourses';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import InstructorDashboard from './pages/instructor/InstructorDashboard';
@@ -30,6 +29,8 @@ import ForgotPassword from './pages/ResetPasswordOTP';
 import CoursebyID from "./pages/CourseForStudent"
 import QuizAttempt from './pages/AttemptQuiz';
 import ParagraphListAdmin from './pages/admin/AdminParagraphs';
+import AdminCoupons from './components/AdminCoupons';
+import Subscription from './pages/Subscription';
 
 const App = () => {
   const { user } = useContext(AuthContext);
@@ -74,11 +75,12 @@ const App = () => {
         <Route path="/quizzes" element={<Quizzes />} />
         <Route path="/pronunciation" element={<Pronunciation />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/subscriptions" element={<Subscriptions />} />
+        <Route path="/subscriptions" element={<Subscription />} />
         <Route path="/my-courses" element={<MyCourses />} />
         <Route path="/dashboard/add-quiz" element={<AddQuiz />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/forgot-password" element={<ForgotPassword/>} />
+        <Route path="/admin-coupons" element={<AdminCoupons/>} />
       </Routes>
     </Router>
   );

@@ -215,7 +215,6 @@ const updateQuiz = async (req, res) => {
 const deleteQuiz = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log(req)
     const instructorId = req.body.instructor_id;
 
     const quiz = await Quiz.findById(id);

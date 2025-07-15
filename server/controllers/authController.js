@@ -40,7 +40,9 @@ const sanitizeUser = (user) => ({
   role: user.role,
   isApproved: user.isApproved,
   googleId: user.googleId || null,
-  createdAt: user.createdAt
+  createdAt: user.createdAt,
+  subscription_upto: user.subscription_upto,
+  subscription_type: user.subscription_type,
 });
 
 // Regular Registration
@@ -48,7 +50,6 @@ export const register = async (req, res) => {
   const { fullName, email, password, role } = req.body;
   
   try {
-    // Input validation
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
@@ -67,22 +68,19 @@ export const register = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Hash password
-    // const hashedPassword = await bcrypt.hash(password, 12);
-    
-    // Create user
     const user = new User({ 
       fullName: fullName.trim(),
       email: email.toLowerCase(), 
       password: password,
       role: role || 'student',
-      isApproved: role === 'instructor' ? false : true // Instructors need approval
+      isApproved: role === 'instructor' ? false : true,
+      subscription_upto: new Date(Date.now() + 24 * 60 * 60 * 1000), // ✅ new
+      subscription_type: 'trial' // ✅ new
     });
     
     await user.save();
@@ -98,6 +96,7 @@ export const register = async (req, res) => {
     res.status(500).json({ message: 'Registration failed. Please try again.' });
   }
 };
+
 
 // Regular Login
 export const login = async (req, res) => {
@@ -207,13 +206,11 @@ export const googleRegister = async (req, res) => {
       return res.status(400).json({ message: 'Name, email, and Google ID are required' });
     }
 
-    // Validate role
     const allowedRoles = ['student', 'instructor', 'tutor'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role specified' });
     }
 
-    // Prevent admin registration via Google
     if (role === 'admin') {
       return res.status(400).json({ message: 'Admin accounts cannot be created via Google authentication' });
     }
@@ -222,12 +219,8 @@ export const googleRegister = async (req, res) => {
       return res.status(400).json({ message: 'Invalid email format' });
     }
 
-    // Check if user already exists
     const existing = await User.findOne({ 
-      $or: [
-        { email: email.toLowerCase() },
-        { googleId: googleId }
-      ]
+      $or: [{ email: email.toLowerCase() }, { googleId: googleId }]
     });
 
     if (existing) {
@@ -236,24 +229,22 @@ export const googleRegister = async (req, res) => {
       });
     }
 
-    // Create user
     const user = new User({ 
       fullName: fullName.trim(),
       email: email.toLowerCase(),
       googleId: googleId,
       role: role || 'student',
-      isApproved: role === 'instructor' ? false : true, // Instructors need approval
+      isApproved: role === 'instructor' ? false : true,
       createdAt: new Date(),
       lastLogin: new Date(),
-      // No password for Google users
+      subscription_upto: new Date(Date.now() + 24 * 60 * 60 * 1000), // ✅ new
+      subscription_type: 'trial' // ✅ new
     });
     
     await user.save();
 
-    // Generate token (even for unapproved instructors, but they'll have limited access)
     const token = generateToken(user);
 
-    // Different messages based on role
     let message = 'Registration successful!';
     if (role === 'instructor') {
       message = 'Registration successful! Your instructor account is pending admin approval.';
@@ -269,6 +260,7 @@ export const googleRegister = async (req, res) => {
     res.status(500).json({ message: 'Google registration failed. Please try again.' });
   }
 };
+
 
 // Logout (optional - mainly for token blacklisting if implemented)
 export const logout = async (req, res) => {
@@ -761,54 +753,38 @@ export const verifyMobileOTP = async (req, res) => {
 
 // Register with Mobile
 export const registerWithMobile = async (req, res) => {
-  const {  fullName, password, mobile } = req.body;
+  const { fullName, password, mobile } = req.body;
   
   try {
     if (!fullName || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // // Verify temp token
-    // let decoded;
-    // try {
-    //   decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
-    // } catch (err) {
-    //   return res.status(400).json({ message: 'Invalid or expired verification token' });
-    // }
-
-    // if (decoded.purpose !== 'mobile-verification') {
-    //   return res.status(400).json({ message: 'Invalid token purpose' });
-    // }
-
-    // const { mobile } = decoded;
-
-    // Check if mobile already registered
     const existingUser = await User.findOne({ mobile });
     if (existingUser) {
       return res.status(400).json({ message: 'Mobile number already registered' });
     }
 
-    // Validate password
     if (!isValidPassword(password)) {
       return res.status(400).json({ 
         message: 'Password must be at least 8 characters with uppercase, lowercase, and numbers' 
       });
     }
 
-    // Create new user
     const user = new User({
       fullName: fullName.trim(),
       mobile,
-      email:'',
+      email: '',
       password: await bcrypt.hash(password, 12),
-      role: 'student', // Only students can register with mobile
+      role: 'student',
       isApproved: true,
-      mobileVerified: true
+      mobileVerified: true,
+      subscription_upto: new Date(Date.now() + 24 * 60 * 60 * 1000), // ✅ new
+      subscription_type: 'trial' // ✅ new
     });
 
     await user.save();
 
-    // Generate auth token
     const authToken = generateToken(user);
 
     res.status(201).json({
@@ -821,6 +797,7 @@ export const registerWithMobile = async (req, res) => {
     res.status(500).json({ message: 'Registration failed. Please try again.' });
   }
 };
+
 
 // Login with Mobile
 export const loginWithMobile = async (req, res) => {
