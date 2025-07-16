@@ -1,5 +1,5 @@
 // client/src/components/NavbarStudent.jsx
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   HomeOutlined, 
@@ -13,13 +13,16 @@ import {
   LeftOutlined,
   RightOutlined
 } from '@ant-design/icons';
+import { AuthContext } from '../contexts/AuthContext';
 
 const NavbarStudent = () => {
+  const { setUser } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = () => {
+    setUser(null)
     localStorage.clear();
     navigate('/');
   };
