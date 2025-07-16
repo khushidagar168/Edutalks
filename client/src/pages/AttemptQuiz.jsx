@@ -343,7 +343,7 @@ const fetchQuiz = async () => {
     );
   }
 
-  // Add safety check for currentQuiz and questions
+  // Add safety check for currentQuiz  and questions
   if (!currentQuiz || !currentQuiz.questions || currentQuiz.questions.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
