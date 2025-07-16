@@ -14,6 +14,7 @@ import topicRoutes from "./routes/topic.js"
 import paraRoutes from "./routes/paragraph.js"
 import couponRoutes from "./routes/coupons.js"
 import subscriptionRoutes from "./routes/subscription.js"
+import siteSettingRoutes from "./routes/siteSettings.js"
 
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use('/api/topics', topicRoutes);
 app.use('/api/paragraphs', paraRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/subscribe', subscriptionRoutes);
+app.use('/api/site-settings', siteSettingRoutes);
 
 
 mongoose.connect(process.env.MONGO_URI)

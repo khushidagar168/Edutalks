@@ -1,16 +1,29 @@
 // client/src/pages/LandingPage.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavbarLanding from '../components/NavbarLanding';
 import Footer from '../components/Footer';
 import AOS from 'aos';
+import axios from '../services/axios';
 import 'aos/dist/aos.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const [siteSettings, setSiteSettings] = useState(null);
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
+
+    const fetchSiteSettings = async () => {
+      try {
+        const res = await axios.get('/site-settings');
+        setSiteSettings(res.data);
+      } catch (error) {
+        console.error('Error fetching site settings:', error);
+      }
+    };
+
+    fetchSiteSettings();
   }, []);
 
   return (
@@ -86,14 +99,16 @@ const LandingPage = () => {
         <p className="text-gray-600 text-lg mb-4" data-aos="fade-up" data-aos-delay="100">
           Have questions or suggestions? Reach out to us!
         </p>
-        <div className="text-slate-600 space-y-1 text-sm">
-          <p>Email: support@edutalks.com</p>
-          <p>Phone: +91 98765 43210</p>
-          <p>Location: Hyderabad, India</p>
-        </div>
+        {siteSettings && (
+          <div className="text-slate-600 space-y-1 text-sm">
+            <p>Email: {siteSettings.email}</p>
+            <p>Phone: {siteSettings.phone}</p>
+            <p>Location: {siteSettings.location}</p>
+          </div>
+        )}
       </section>
 
-      <Footer />
+      <Footer siteSettings={siteSettings} />
     </div>
   );
 };

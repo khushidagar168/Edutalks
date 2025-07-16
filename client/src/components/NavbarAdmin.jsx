@@ -20,6 +20,7 @@ const NavbarAdmin = () => {
         <Link to="/admin/topics">Topics</Link>
         <Link to="/admin/paragraphs">Paragraphs</Link>
         <Link to="/admin-coupons">Coupons</Link>
+        <Link to="/admin/settings">Site Settings</Link>
         <Link to="/profile">Profile</Link>
         <button onClick={handleLogout} className="text-red-500 ml-4 hover:underline">
           Logout

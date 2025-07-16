@@ -2,11 +2,11 @@
 import React from 'react';
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
 
-const Footer = () => {
+const Footer = ({ siteSettings }) => {
   return (
     <footer className="bg-gradient-to-t from-white via-gray-50 to-gray-100 border-t mt-20">
       <div className="max-w-6xl mx-auto px-6 py-12 grid sm:grid-cols-2 md:grid-cols-4 gap-10 text-sm text-gray-700">
-        
+
         {/* EduTalks Info */}
         <div>
           <h3 className="text-2xl font-bold text-indigo-600 mb-2">EduTalks</h3>
@@ -29,23 +29,74 @@ const Footer = () => {
         {/* Contact */}
         <div>
           <h4 className="font-semibold text-gray-900 mb-3">Contact</h4>
-          <ul className="space-y-1 text-gray-600">
-            <li>Email: support@edutalks.com</li>
-            <li>Phone: +91 98765 43210</li>
-            <li>Location: Kurukshetra, India</li>
-          </ul>
+          {siteSettings && (
+            <ul className="space-y-1 text-gray-600">
+              <li>Email: {siteSettings.email}</li>
+              <li>Phone: {siteSettings.phone}</li>
+              <li>Location: {siteSettings.location}</li>
+            </ul>
+          )}
         </div>
 
         {/* Social Links */}
         <div>
           <h4 className="font-semibold text-gray-900 mb-3">Follow Us</h4>
           <div className="flex gap-4 text-indigo-600 text-lg">
-            <a href="#"><FaFacebookF className="hover:text-indigo-800 transition" /></a>
-            <a href="#"><FaTwitter className="hover:text-indigo-800 transition" /></a>
-            <a href="#"><FaInstagram className="hover:text-indigo-800 transition" /></a>
-            <a href="#"><FaLinkedinIn className="hover:text-indigo-800 transition" /></a>
+            {siteSettings?.facebook && (
+              <a
+                href={
+                  siteSettings.facebook.startsWith('http')
+                    ? siteSettings.facebook
+                    : `https://${siteSettings.facebook}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaFacebookF className="hover:text-indigo-800 transition" />
+              </a>
+            )}
+            {siteSettings?.twitter && (
+              <a
+                href={
+                  siteSettings.twitter.startsWith('http')
+                    ? siteSettings.twitter
+                    : `https://${siteSettings.twitter}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaTwitter className="hover:text-indigo-800 transition" />
+              </a>
+            )}
+            {siteSettings?.instagram && (
+              <a
+                href={
+                  siteSettings.instagram.startsWith('http')
+                    ? siteSettings.instagram
+                    : `https://${siteSettings.instagram}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaInstagram className="hover:text-indigo-800 transition" />
+              </a>
+            )}
+            {siteSettings?.linkedin && (
+              <a
+                href={
+                  siteSettings.linkedin.startsWith('http')
+                    ? siteSettings.linkedin
+                    : `https://${siteSettings.linkedin}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaLinkedinIn className="hover:text-indigo-800 transition" />
+              </a>
+            )}
           </div>
         </div>
+
       </div>
 
       {/* Bottom Note */}
