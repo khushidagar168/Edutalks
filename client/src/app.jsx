@@ -39,15 +39,15 @@ const App = () => {
   return (
     <Router>
       {/* Top Navbar for Admin and Instructor */}
-      {user?.role === 'instructor' && <NavbarInstructor />}
-      {user?.role === 'admin' && <NavbarAdmin />}
+      {user && user.role === 'instructor' && <NavbarInstructor />}
+      {user && user.role === 'admin' && <NavbarAdmin />}
 
       <div className="flex min-h-screen">
         {/* Sidebar for Student */}
-        {user?.role === 'student' && <NavbarStudent />}
+        {user && user.role === 'student' && <NavbarStudent />}
 
         {/* Main Content Area */}
-        <div className={`flex-1 ${user?.role === 'student' ? 'ml-64' : ''}`}>
+        <div className={`flex-1 ${user?.role === 'student' ? 'ml-0 lg:ml-64' : ''}`}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
